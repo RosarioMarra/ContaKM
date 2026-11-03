@@ -16,6 +16,7 @@
   const SAVE_EVERY_MS = 10000;
   const REROUTE_COOLDOWN_MS = 20000;
   const UNLOCK_HOLD_MS = 1000;  const ROUTE_COLOR = '#e0218a';
+  const CYCLEWAY_COLOR = '#0b9a4b';
   const WECITY_PLAY_URL = 'https://play.google.com/store/apps/details?id=it.wecity.app3';
   const WECITY_IOS_URL = 'https://apps.apple.com/it/app/wecity/id655647085';
 
@@ -272,6 +273,23 @@
 
   const RIDER_ICON = `<svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" fill="#2563eb" stroke="#fff" stroke-width="3"/><path d="M22 9l9 23-9-5-9 5z" fill="#fff"/></svg>`;
 
+  /** Disegna le piste ciclabili sotto i nomi delle strade. */
+  function addCycleways(gl) {
+    const firstLabel = gl.getStyle().layers.find((layer) => layer.type === 'symbol')?.id;
+    gl.addLayer({
+      id: 'piste-ciclabili',
+      type: 'line',
+      source: 'openmaptiles',
+      'source-layer': 'transportation',
+      filter: ['any', ['==', ['get', 'subclass'], 'cycleway'], ['==', ['get', 'bicycle'], 'designated']],
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: {
+        'line-color': CYCLEWAY_COLOR,
+        'line-width': ['interpolate', ['linear'], ['zoom'], 13, 2, 16, 4, 19, 8],
+      },
+    }, firstLabel);
+  }
+
   function createTiles(target) {
     const osm = () =>
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -291,7 +309,10 @@
     }
     let loaded = false;
     const gl = simple.getMaplibreMap();
-    gl.once('load', () => { loaded = true; });
+    gl.once('load', () => {
+      loaded = true;
+      addCycleways(gl);
+    });
     gl.on('error', () => {
       if (!loaded && navigator.onLine && target.hasLayer(simple)) {
         target.removeLayer(simple);
