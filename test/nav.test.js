@@ -90,6 +90,21 @@ test('se il percorso con la direzione di marcia fallisce, riprova senza', async 
   assert.equal(route.distanceM, 1000);
 });
 
+test('il percorso chiesto è sempre il più breve', async (t) => {
+  let options;
+  t.mock.method(globalThis, 'fetch', async (url) => {
+    options = JSON.parse(decodeURIComponent(url.split('json=')[1])).costing_options.bicycle;
+    return {
+      ok: true,
+      json: async () => ({
+        trip: { summary: { length: 1, time: 240 }, legs: [{ shape: '_izlhA~rlgdF_{geC~ywl@', maneuvers: [] }] },
+      }),
+    };
+  });
+  await fetchRoute({ lat: 40, lon: 14 }, { lat: 41, lon: 15 });
+  assert.equal(options.shortest, true);
+});
+
 test('frecce e icone delle manovre', () => {
   assert.equal(arrowAngle(10), 90);
   assert.equal(arrowAngle(15), -90);

@@ -68,8 +68,9 @@
           </div>
         </div>
 
-        <div class="speed">
+        <div class="speed" id="speed-box" role="button" tabindex="0" aria-label="Tocca per cambiare tachimetro">
           <div class="speed-value" id="speed">0</div>
+          <svg class="gauge" id="gauge" viewBox="0 0 200 172" hidden aria-hidden="true"></svg>
           <div class="speed-unit">km/h <span class="speed-note" id="speed-note"></span></div>
         </div>
 
@@ -155,8 +156,7 @@
 
         <h2>Bici e percorsi</h2>
         <div class="setting"><div class="setting-label">Tipo di bici</div><div class="segmented" id="set-bike"></div></div>
-        <button class="toggle" id="set-paths"><span>Preferisci le ciclabili</span><span class="switch"></span></button>
-        <button class="toggle" id="set-hills"><span>Evita le salite</span><span class="switch"></span></button>
+        <p class="hint">Il navigatore sceglie sempre il percorso più breve, anche per stradine e vicoli.</p>
 
         <h2>WeCity</h2>
         <button class="toggle" id="set-wecity"><span>Mostra il pulsante Apri WeCity</span><span class="switch"></span></button>
