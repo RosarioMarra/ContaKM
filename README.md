@@ -42,7 +42,7 @@ Il pulsante "Apri WeCity" apre l'app (`it.wecity.app3`) su Android; su iPhone po
 | --- | --- |
 | Mappa | OpenFreeMap, stile Positron, con OpenStreetMap come riserva |
 | Ricerca luoghi | Photon (Komoot) |
-| Percorsi bici e istruzioni in italiano | Valhalla (FOSSGIS) |
+| Percorsi bici (sempre il più breve) e istruzioni in italiano | Valhalla (FOSSGIS) |
 
 Sono server pubblici offerti gratis per un uso moderato: vanno bene per uso personale, non per un'app con molti utenti.
 

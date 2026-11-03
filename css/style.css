@@ -118,6 +118,9 @@ h2 { font-size: 20px; font-weight: 800; margin: 18px 0 8px; }
   display: grid; place-items: center;
   background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
 }
+.topbar .icon-btn { width: 40px; height: 40px; font-size: 20px; border-radius: 11px; }
+.topbar .logo { width: 34px; height: 34px; border-radius: 8px; }
+.topbar .gps { font-size: 15px; }
 .icon-btn[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 
 .speed { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -125,6 +128,19 @@ h2 { font-size: 20px; font-weight: 800; margin: 18px 0 8px; }
   font-size: min(46vw, 28dvh); font-weight: 800; line-height: .9;
   letter-spacing: -.03em; font-variant-numeric: tabular-nums;
 }
+.speed { cursor: pointer; }
+.speed:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 14px; }
+.speed .gauge { width: 100%; height: auto; flex: 1; min-height: 0; max-height: 100%; stroke: none; overflow: visible; }
+.gauge-track, .gauge-fill { fill: none; stroke-width: 10; stroke-linecap: round; }
+.gauge-track { stroke: var(--line); }
+.gauge-fill { stroke: var(--accent); transition: stroke-dasharray .4s ease-out; }
+.gauge-tick { stroke: var(--muted); stroke-width: 1.5; stroke-linecap: round; }
+.gauge-tick.major { stroke: var(--ink); stroke-width: 3; }
+.gauge-label { fill: var(--muted); font-size: 14px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+.gauge-value { fill: var(--ink); font-size: 38px; font-weight: 800; text-anchor: middle; font-variant-numeric: tabular-nums; }
+.gauge-needle { transform-origin: 100px 100px; transition: transform .4s ease-out; }
+.gauge-needle line { stroke: var(--accent); stroke-width: 5; stroke-linecap: round; }
+.gauge-needle circle { fill: var(--ink); stroke: var(--bg); stroke-width: 3; }
 .speed-unit { font-size: 24px; font-weight: 600; color: var(--muted); margin-top: 4px; }
 .speed-note { color: var(--warn); margin-left: 6px; }
 

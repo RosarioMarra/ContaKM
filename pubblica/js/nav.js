@@ -54,8 +54,10 @@
       costing_options: {
         bicycle: {
           bicycle_type: options.bikeType || 'Hybrid',
-          use_hills: options.avoidHills ? 0.1 : 0.5,
-          use_roads: options.preferPaths ? 0.2 : 0.5,
+          // Sempre il percorso più breve: conta solo la distanza, stradine e vicoli compresi.
+          shortest: true,
+          use_living_streets: 1,
+          avoid_bad_surfaces: 0,
         },
       },
       language: 'it-IT',
