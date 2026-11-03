@@ -15,8 +15,6 @@
     accent: 'orange',
     kmAlert: 5,
     bikeType: 'Hybrid',
-    avoidHills: false,
-    preferPaths: true,
     wecity: true,
     weightKg: 75,
     weeklyGoalKm: 50,

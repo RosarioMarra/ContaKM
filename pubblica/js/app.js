@@ -380,8 +380,6 @@
   const routeOptions = () => ({
     heading,
     bikeType: prefs.bikeType,
-    avoidHills: prefs.avoidHills,
-    preferPaths: prefs.preferPaths,
   });
 
   async function chooseDestination(place) {
@@ -844,8 +842,6 @@ ${points}
     setupSegmented('set-accent', ACCENTS, 'accent');
     setupSegmented('set-km-alert', KM_ALERTS, 'kmAlert');
     setupSegmented('set-bike', BIKE_TYPES, 'bikeType');
-    setupToggle('set-hills', 'avoidHills');
-    setupToggle('set-paths', 'preferPaths');
     setupToggle('set-wecity', 'wecity');
     $('set-wecity').addEventListener('click', render);
     $('btn-wecity').href = wecityLink();
