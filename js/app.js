@@ -1046,6 +1046,22 @@ ${points}
   // In locale il service worker è spento, così le modifiche si vedono subito.
   const canInstall = location.protocol === 'https:' || (location.hostname === 'localhost' && params.has('sw'));
   if ('serviceWorker' in navigator && canInstall) {
-    navigator.serviceWorker.register('sw.js');
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    navigator.serviceWorker.register('sw.js').then((reg) => {
+      // Riaprendo l'app dal sottofondo la pagina non si ricarica: si controlla qui se c'è una versione nuova.
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') reg.update().catch(() => {});
+      });
+    }).catch(() => {});
+    // Versione nuova pronta: si ricarica subito, ma mai durante un'uscita.
+    let reloadPending = false;
+    const reloadIfIdle = () => {
+      if (ride.state === 'idle') location.reload();
+      else reloadPending = true;
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (hadController) reloadIfIdle();
+    });
+    setInterval(() => { if (reloadPending) reloadIfIdle(); }, 5000);
   }
 })();

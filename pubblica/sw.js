@@ -1,7 +1,7 @@
 // Fa funzionare l'app senza rete: il conta km non deve mai dipendere dal segnale.
 // Il navigatore (ricerca e percorso) resta online; le mappe già viste restano in memoria.
 
-const SHELL_CACHE = 'contakm-shell-v9';
+const SHELL_CACHE = 'contakm-shell-v10';
 const TILE_CACHE = 'contakm-tiles-v1';
 const MAX_TILES = 1500;
 
@@ -33,7 +33,7 @@ const SHELL = [
 const TILE_HOST = /(^|\.)(tile\.openstreetmap\.org|tiles\.openfreemap\.org)$/;
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(SHELL_CACHE).then((cache) => cache.addAll(SHELL)));
+  event.waitUntil(caches.open(SHELL_CACHE).then((cache) => cache.addAll(SHELL.map((url) => new Request(url, { cache: 'reload' })))));
   self.skipWaiting();
 });
 
@@ -51,7 +51,7 @@ async function shellResponse(request) {
   const cache = await caches.open(SHELL_CACHE);
   const cached = await cache.match(request, { ignoreSearch: true });
   // Risposta immediata dalla memoria, aggiornamento in sottofondo per la prossima apertura.
-  const update = fetch(request).then((res) => {
+  const update = fetch(request, { cache: 'no-cache' }).then((res) => {
     if (res.ok) cache.put(request, res.clone());
     return res;
   });
