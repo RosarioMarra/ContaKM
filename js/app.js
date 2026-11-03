@@ -15,8 +15,7 @@
   const MIN_RIDE_M = 50;
   const SAVE_EVERY_MS = 10000;
   const REROUTE_COOLDOWN_MS = 20000;
-  const UNLOCK_HOLD_MS = 1000;
-  const ROUTE_COLOR = '#e0218a';
+  const UNLOCK_HOLD_MS = 1000;  const ROUTE_COLOR = '#e0218a';
   const WECITY_PLAY_URL = 'https://play.google.com/store/apps/details?id=it.wecity.app3';
   const WECITY_IOS_URL = 'https://apps.apple.com/it/app/wecity/id655647085';
 
@@ -189,7 +188,7 @@
       $('gps-text').textContent = 'GPS spento';
     } else if (ride.hasSignal()) {
       el.dataset.state = 'ok';
-      $('gps-text').textContent = isDemo ? 'GPS demo' : 'GPS ok';
+      $('gps-text').textContent = `${isDemo ? 'Demo' : 'GPS'} ±${Math.round(lastFix.accuracy)} m`;
     } else {
       el.dataset.state = 'searching';
       $('gps-text').textContent = 'Cerco GPS…';
@@ -278,23 +277,32 @@
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19, crossOrigin: true, attribution: '© OpenStreetMap',
       });
-    // CyclOSM mostra le ciclabili; se il suo server non risponde si passa a OSM standard.
-    const cyclosm = L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', {
-      maxZoom: 19, subdomains: 'abc', crossOrigin: true, attribution: '© OpenStreetMap · CyclOSM',
-    });
-    let errors = 0;
-    cyclosm.on('tileerror', () => {
-      if (++errors === 6 && navigator.onLine) {
-        target.removeLayer(cyclosm);
+    // Mappa semplice, quasi solo strade e nomi; se non si carica si passa a OSM standard.
+    let simple;
+    try {
+      simple = L.maplibreGL({
+        style: 'https://tiles.openfreemap.org/styles/positron',
+        attribution: '© OpenStreetMap · OpenFreeMap',
+      }).addTo(target);
+    } catch { /* telefono senza WebGL */ }
+    if (!simple) {
+      osm().addTo(target);
+      return;
+    }
+    let loaded = false;
+    const gl = simple.getMaplibreMap();
+    gl.once('load', () => { loaded = true; });
+    gl.on('error', () => {
+      if (!loaded && navigator.onLine && target.hasLayer(simple)) {
+        target.removeLayer(simple);
         osm().addTo(target);
       }
     });
-    cyclosm.addTo(target);
   }
 
   function initMap() {
     if (map) return;
-    map = L.map('map', { zoomControl: false, center: [41.9, 12.5], zoom: 6 });
+    map = L.map('map', { zoomControl: false, center: [41.9, 12.5], zoom: 6, maxZoom: 19 });
     map.attributionControl.setPrefix(false);
     createTiles(map);
     map.on('dragstart', () => {
@@ -652,11 +660,12 @@
     const mapEl = $('detail-map');
     mapEl.hidden = r.track.length < 2;
     if (r.track.length >= 2) {
-      detailMap = L.map(mapEl, { zoomControl: false });
+      detailMap = L.map(mapEl, { zoomControl: false, maxZoom: 19 });
       detailMap.attributionControl.setPrefix(false);
+      const line = L.polyline(r.track.map((p) => [p[0], p[1]]), { color: ROUTE_COLOR, weight: 6 });
+      detailMap.fitBounds(line.getBounds(), { padding: [20, 20], animate: false });
       createTiles(detailMap);
-      const line = L.polyline(r.track.map((p) => [p[0], p[1]]), { color: ROUTE_COLOR, weight: 6 }).addTo(detailMap);
-      detailMap.fitBounds(line.getBounds(), { padding: [20, 20] });
+      line.addTo(detailMap);
     }
   }
 

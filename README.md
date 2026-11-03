@@ -28,7 +28,9 @@ Il GPS del telefono funziona solo su `https://`, quindi l'app va pubblicata su u
 
 Per aggiornare l'app, rifai il punto 1 e, nella pagina del sito su Netlify, carica di nuovo la cartella dalla sezione Deploys, così l'indirizzo non cambia. Sul telefono la nuova versione compare dalla seconda apertura dell'app.
 
-Finché la bici è in movimento lo schermo resta acceso e l'app deve restare in primo piano: i browser sospendono il GPS delle pagine in sottofondo.
+Finché la bici è in movimento lo schermo resta acceso e l'app deve restare in primo piano: i browser sospendono il GPS delle pagine in sottofondo. I km si contano solo dopo aver premuto Avvia.
+
+Il numero di satelliti non è disponibile nei browser: l'app mostra la precisione GPS in metri, che è il dato reale fornito dal telefono.
 
 ## WeCity
 
@@ -38,7 +40,7 @@ Il pulsante "Apri WeCity" apre l'app (`it.wecity.app3`) su Android; su iPhone po
 
 | Cosa | Servizio |
 | --- | --- |
-| Mappa | CyclOSM, con OpenStreetMap come riserva |
+| Mappa | OpenFreeMap, stile Positron, con OpenStreetMap come riserva |
 | Ricerca luoghi | Photon (Komoot) |
 | Percorsi bici e istruzioni in italiano | Valhalla (FOSSGIS) |
 

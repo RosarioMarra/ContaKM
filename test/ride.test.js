@@ -91,6 +91,17 @@ test('il dislivello ignora il rumore e somma le salite vere', () => {
   assert.ok(ride.climbM > 80 && ride.climbM < 100, `salita ${ride.climbM}`);
 });
 
+test('senza Avvia i km non vengono contati', () => {
+  const ride = new Ride();
+  for (let s = 0; s <= 30; s++) {
+    ride.update(fix(s, s * 7, 7));
+    ride.tick(T0 + s * 1000);
+  }
+  assert.ok(ride.speedMs > 6, `velocità ${ride.speedMs}`);
+  assert.equal(ride.distanceM, 0);
+  assert.equal(ride.movingMs, 0);
+});
+
 test('una uscita salvata riparte in pausa con i suoi dati', () => {
   const ride = new Ride();
   ride.start(T0);
