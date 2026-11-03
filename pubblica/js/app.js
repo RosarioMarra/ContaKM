@@ -48,6 +48,7 @@
   let lastSaveAt = 0;
   let wakeLock = null;
   let announcedKmSteps = 0;
+  let historyM = summarize(store.loadHistory()).totalM; // km delle uscite salvate, per la home
 
   // Navigazione
   let nav = null;
@@ -210,6 +211,7 @@
     $('stat-climb').textContent = String(Math.round(ride.climbM));
     $('stat-kcal').textContent = String(Math.round(caloriesFor(ride.distanceM, ride.movingMs, prefs.weightKg)));
     $('stat-clock').textContent = clock(Date.now());
+    renderTotal();
 
     $('btn-start').hidden = ride.state !== 'idle';
     $('btn-pause').hidden = ride.state !== 'running';
@@ -218,6 +220,11 @@
     // Solo prima di partire: passando a un'altra app il browser sospende il GPS di ContaKM.
     $('btn-wecity').hidden = !prefs.wecity || ride.state !== 'idle';
     renderGps();
+  }
+
+  /** Km totali in home: uscite salvate più quella in corso, così crescono mentre pedali. */
+  function renderTotal() {
+    $('stat-total').textContent = number((historyM + ride.distanceM) / 1000, 1);
   }
 
   /** Android apre l'app se c'è, altrimenti Google Play; iPhone arriva all'App Store. */
@@ -624,6 +631,8 @@
     $('month-km').textContent = number(s.monthM / 1000, 1);
     $('total-km').textContent = number(s.totalM / 1000, 1);
     $('total-rides').textContent = s.rides;
+    historyM = s.totalM;
+    renderTotal();
 
     const goal = prefs.weeklyGoalKm;
     $('goal').hidden = !goal;

@@ -134,6 +134,8 @@ h2 { font-size: 20px; font-weight: 800; margin: 18px 0 8px; }
 .stat-value { font-size: 28px; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .stat-main .stat-value { font-size: min(11vw, 46px); color: var(--accent); }
 .stats-small .stat-value { font-size: 22px; }
+.stat-total { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex: none; }
+.stat-total .stat-value { font-size: 26px; color: var(--accent); }
 .stat-label { font-size: 14px; font-weight: 600; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .controls { display: flex; gap: 8px; flex: none; }
