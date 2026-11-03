@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="it" data-accent="orange">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0f1b2d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>ContaKM</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/logo.svg" type="image/svg+xml">
+  <link rel="alternate icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <svg hidden aria-hidden="true">
+    <symbol id="i-bike" viewBox="0 0 24 24"><circle cx="5.500" cy="16.500" r="3.800"/><circle cx="18.500" cy="16.500" r="3.800"/><path d="M5.500 16.500 9 10h7l-4.500 6.500H5.500ZM9 10 8 7.500H6M18.500 16.500 15.500 7h3"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="M12 21s7-6.200 7-11.500A7 7 0 0 0 5 9.500C5 14.800 12 21 12 21Z"/><circle cx="12" cy="9.500" r="2.500"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.500 6h.01M3.500 12h.01M3.500 18h.01"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20.500 20.500-4.500-4.500"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-voice" viewBox="0 0 24 24"><path d="M4 10v4h3.500L12 18V6L7.500 10H4ZM16 9a4 4 0 0 1 0 6M18.500 6.500a8 8 0 0 1 0 11"/></symbol>
+    <symbol id="i-voice-off" viewBox="0 0 24 24"><path d="M4 10v4h3.500L12 18V6L7.500 10H4ZM16.500 9.500l5 5M21.500 9.500l-5 5"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.500v2M12 19.500v2M2.500 12h2M19.500 12h2M5.300 5.300l1.400 1.400M17.300 17.300l1.400 1.400M5.300 18.700l1.400-1.400M17.300 6.700l1.400-1.400"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.800 5.800 6.200.9-4.500 4.400 1 6.300-5.500-3-5.500 3 1-6.300L3 9.700l6.200-.9L12 3Z"/></symbol>
+    <symbol id="i-locate" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M12 21V4M5 11l7-7 7 7"/></symbol>
+    <symbol id="i-roundabout" viewBox="0 0 24 24"><path d="M12 22v-6"/><circle cx="12" cy="10" r="5.500"/><path d="M17.500 10H22M19.500 7.500 22 10l-2.500 2.500"/></symbol>
+    <symbol id="i-destination" viewBox="0 0 24 24"><path d="M6 22V3M6 4h12l-3 4 3 4H6"/></symbol>
+  </svg>
+
+  <div id="app">
+    <header id="turn" hidden>
+      <svg class="turn-icon" id="turn-icon"><use href="#i-arrow"/></svg>
+      <div class="turn-body">
+        <div class="turn-distance" id="turn-distance">—</div>
+        <div class="turn-text" id="turn-text"></div>
+      </div>
+      <div class="turn-side">
+        <button class="turn-close" id="turn-close" aria-label="Termina navigazione"><svg><use href="#i-close"/></svg></button>
+        <div class="turn-left" id="turn-left"></div>
+        <div class="turn-left" id="turn-eta"></div>
+      </div>
+    </header>
+
+    <div id="alert" class="alert" hidden>
+      <span id="alert-text"></span>
+      <button id="btn-alert-demo">Prova il giro simulato</button>
+    </div>
+
+    <main>
+      <section id="view-ride" class="view">
+        <div class="topbar">
+          <div class="brand">
+            <img class="logo" src="icons/logo.svg" alt="ContaKM">
+            <div class="gps" id="gps"><span class="dot"></span><span id="gps-text">GPS spento</span></div>
+          </div>
+          <div class="topbar-actions">
+            <button class="icon-btn" id="btn-lock" aria-label="Blocca i tocchi"><svg><use href="#i-lock"/></svg></button>
+            <button class="icon-btn" id="btn-voice" aria-label="Voce"><svg><use href="#i-voice"/></svg></button>
+            <button class="icon-btn" id="btn-sun" aria-label="Schermo ad alto contrasto per il sole"><svg><use href="#i-sun"/></svg></button>
+          </div>
+        </div>
+
+        <div class="speed">
+          <div class="speed-value" id="speed">0</div>
+          <div class="speed-unit">km/h <span class="speed-note" id="speed-note"></span></div>
+        </div>
+
+        <div class="stats">
+          <div class="stat stat-main"><div class="stat-value" id="stat-distance">0,00</div><div class="stat-label">km percorsi</div></div>
+          <div class="stat stat-main"><div class="stat-value" id="stat-time">0:00:00</div><div class="stat-label">tempo</div></div>
+          <div class="stat"><div class="stat-value" id="stat-avg">0,0</div><div class="stat-label">media km/h</div></div>
+          <div class="stat"><div class="stat-value" id="stat-max">0,0</div><div class="stat-label">massima km/h</div></div>
+        </div>
+        <div class="stats stats-small">
+          <div class="stat"><div class="stat-value" id="stat-climb">0</div><div class="stat-label">m salita</div></div>
+          <div class="stat"><div class="stat-value" id="stat-kcal">0</div><div class="stat-label">kcal</div></div>
+          <div class="stat"><div class="stat-value" id="stat-clock">--:--</div><div class="stat-label">ora</div></div>
+        </div>
+
+        <div class="controls">
+          <a class="btn btn-secondary btn-wecity" id="btn-wecity" hidden>Apri WeCity</a>
+          <button class="btn btn-primary" id="btn-start">Avvia</button>
+          <button class="btn btn-pause" id="btn-pause" hidden>Pausa</button>
+          <button class="btn btn-primary" id="btn-resume" hidden>Riprendi</button>
+          <button class="btn btn-stop" id="btn-finish" hidden>Termina</button>
+        </div>
+      </section>
+
+      <section id="view-map" class="view" hidden>
+        <div id="map"></div>
+        <button class="search-btn" id="btn-search"><svg><use href="#i-search"/></svg>Dove vai?</button>
+        <button class="icon-btn map-locate" id="btn-locate" aria-label="Torna alla mia posizione" hidden><svg><use href="#i-locate"/></svg></button>
+
+        <div class="map-strip" id="map-strip">
+          <div><span class="map-strip-value" id="map-speed">0</span> km/h</div>
+          <div><span class="map-strip-value" id="map-distance">0,00</span> km</div>
+        </div>
+
+        <div class="preview" id="preview" hidden>
+          <div class="preview-title" id="preview-title"></div>
+          <div class="preview-info" id="preview-info"></div>
+          <div class="preview-actions">
+            <button class="btn btn-stop" id="btn-preview-cancel">Annulla</button>
+            <button class="btn btn-primary" id="btn-go">Parti</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-history" class="view scroll" hidden>
+        <div class="totals">
+          <div class="stat"><div class="stat-value" id="week-km">0</div><div class="stat-label">km settimana</div></div>
+          <div class="stat"><div class="stat-value" id="month-km">0</div><div class="stat-label">km mese</div></div>
+          <div class="stat"><div class="stat-value" id="total-km">0</div><div class="stat-label">km totali</div></div>
+          <div class="stat"><div class="stat-value" id="total-rides">0</div><div class="stat-label">uscite</div></div>
+        </div>
+        <div class="goal" id="goal">
+          <div class="goal-text" id="goal-text"></div>
+          <div class="bar"><div class="bar-fill" id="goal-fill"></div></div>
+        </div>
+        <div class="records" id="records" hidden>
+          <h2>I tuoi record</h2>
+          <div class="stats stats-small">
+            <div class="stat"><div class="stat-value" id="record-long">0</div><div class="stat-label">km più lunga</div></div>
+            <div class="stat"><div class="stat-value" id="record-avg">0</div><div class="stat-label">media km/h</div></div>
+            <div class="stat"><div class="stat-value" id="record-top">0</div><div class="stat-label">massima km/h</div></div>
+          </div>
+        </div>
+        <ul class="history" id="history"></ul>
+        <div class="empty" id="history-empty">
+          <img class="logo logo-large" src="icons/logo.svg" alt="">
+          <p>Qui troverai le tue uscite.<br>Premi Avvia e buona pedalata.</p>
+        </div>
+      </section>
+
+      <section id="view-more" class="view scroll" hidden>
+        <div class="more-head">
+          <img class="logo logo-large" src="icons/logo.svg" alt="">
+          <div class="more-name">ContaKM</div>
+        </div>
+
+        <h2>Aspetto</h2>
+        <div class="setting"><div class="setting-label">Colore</div><div class="segmented" id="set-accent"></div></div>
+
+        <h2>Bici e percorsi</h2>
+        <div class="setting"><div class="setting-label">Tipo di bici</div><div class="segmented" id="set-bike"></div></div>
+        <button class="toggle" id="set-paths"><span>Preferisci le ciclabili</span><span class="switch"></span></button>
+        <button class="toggle" id="set-hills"><span>Evita le salite</span><span class="switch"></span></button>
+
+        <h2>WeCity</h2>
+        <button class="toggle" id="set-wecity"><span>Mostra il pulsante Apri WeCity</span><span class="switch"></span></button>
+
+        <h2>Voce</h2>
+        <div class="setting"><div class="setting-label">Annuncia km e media ogni</div><div class="segmented" id="set-km-alert"></div></div>
+
+        <h2>I tuoi dati</h2>
+        <div class="setting stepper-row">
+          <div class="setting-label">Peso (kg), per le calorie</div>
+          <div class="stepper" id="set-weight"><button aria-label="Meno">−</button><span class="stepper-value"></span><button aria-label="Più">+</button></div>
+        </div>
+        <div class="setting stepper-row">
+          <div class="setting-label">Obiettivo km a settimana</div>
+          <div class="stepper" id="set-goal"><button aria-label="Meno">−</button><span class="stepper-value"></span><button aria-label="Più">+</button></div>
+        </div>
+
+        <h2>Manutenzione bici</h2>
+        <div class="setting">
+          <div class="goal-text" id="service-text"></div>
+          <div class="bar"><div class="bar-fill" id="service-fill"></div></div>
+        </div>
+        <div class="setting stepper-row">
+          <div class="setting-label">Avvisami ogni (km)</div>
+          <div class="stepper" id="set-service"><button aria-label="Meno">−</button><span class="stepper-value"></span><button aria-label="Più">+</button></div>
+        </div>
+        <button class="btn btn-secondary wide" id="btn-service-done">Manutenzione fatta</button>
+
+        <h2>Strumenti</h2>
+        <div class="tools">
+          <button class="btn btn-secondary wide" id="btn-share">Condividi la mia posizione</button>
+          <button class="btn btn-secondary wide" id="btn-backup">Salva backup uscite</button>
+          <button class="btn btn-secondary wide" id="btn-restore">Carica backup</button>
+          <button class="btn btn-secondary wide" id="btn-demo">Prova il giro simulato</button>
+        </div>
+        <input type="file" id="restore-file" accept="application/json,.json" hidden>
+      </section>
+    </main>
+
+    <nav class="tabs">
+      <button class="tab" data-view="ride" aria-current="page"><svg><use href="#i-bike"/></svg>Conta km</button>
+      <button class="tab" data-view="map"><svg><use href="#i-map"/></svg>Mappa</button>
+      <button class="tab" data-view="history"><svg><use href="#i-list"/></svg>Uscite</button>
+      <button class="tab" data-view="more"><svg><use href="#i-sliders"/></svg>Altro</button>
+    </nav>
+  </div>
+
+  <div id="lock" hidden>
+    <div class="lock-hint"><svg><use href="#i-lock"/></svg>Tieni premuto per sbloccare</div>
+  </div>
+
+  <dialog id="search" class="sheet">
+    <div class="sheet-head">
+      <input id="search-input" type="search" placeholder="Via, città, luogo…" autocomplete="off" enterkeyhint="search">
+      <button class="icon-btn" id="btn-mic" aria-label="Detta la destinazione" hidden><svg><use href="#i-mic"/></svg></button>
+      <button class="icon-btn" id="btn-search-close" aria-label="Chiudi"><svg><use href="#i-close"/></svg></button>
+    </div>
+    <p class="hint" id="search-hint"></p>
+    <ul class="results" id="results"></ul>
+  </dialog>
+
+  <dialog id="detail" class="sheet">
+    <div class="sheet-head">
+      <h2 id="detail-title"></h2>
+      <button class="icon-btn" id="btn-detail-close" aria-label="Chiudi"><svg><use href="#i-close"/></svg></button>
+    </div>
+    <div id="detail-map"></div>
+    <div class="stats detail-stats" id="detail-stats"></div>
+    <div class="detail-actions">
+      <button class="btn btn-secondary" id="btn-gpx">Scarica GPX</button>
+      <button class="btn btn-stop" id="btn-delete">Elimina</button>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="js/geo.js"></script>
+  <script src="js/stats.js"></script>
+  <script src="js/ride.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/gps.js"></script>
+  <script src="js/sim.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

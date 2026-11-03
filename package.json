@@ -1,0 +1,12 @@
+{
+  "name": "contakm",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Conta km e navigatore per la bici (PWA senza build)",
+  "scripts": {
+    "dev": "node tools/dev-server.mjs",
+    "pubblica": "node tools/prepare-publish.mjs",
+    "test": "node --test"
+  }
+}
