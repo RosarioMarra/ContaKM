@@ -16,6 +16,7 @@
     kmAlert: 5,
     bikeType: 'Hybrid',
     wecity: true,
+    speedStyle: 'digital', // 'digital' oppure 'analog'
     weightKg: 75,
     weeklyGoalKm: 50,
     serviceEveryKm: 300,

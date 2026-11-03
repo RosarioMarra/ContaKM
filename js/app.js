@@ -201,6 +201,7 @@
     const speed = String(Math.round(ride.speedMs * 3.6));
     $('speed').textContent = speed;
     $('map-speed').textContent = speed;
+    renderGauge(ride.speedMs * 3.6);
     $('speed-note').textContent =
       ride.state === 'paused' ? '· in pausa' : ride.state === 'running' && !ride.moving ? '· fermo' : '';
     $('stat-distance').textContent = km(ride.distanceM);
@@ -220,6 +221,72 @@
     // Solo prima di partire: passando a un'altra app il browser sospende il GPS di ContaKM.
     $('btn-wecity').hidden = !prefs.wecity || ride.state !== 'idle';
     renderGps();
+  }
+
+  // ---------- Tachimetro analogico ----------
+
+  const GAUGE_MAX_KMH = 50;
+  const GAUGE_SWEEP = 270; // gradi, da -135 a +135 rispetto alla verticale
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const gaugeAngle = (kmhValue) => -GAUGE_SWEEP / 2 + (Math.min(kmhValue, GAUGE_MAX_KMH) / GAUGE_MAX_KMH) * GAUGE_SWEEP;
+
+  function svgEl(tag, attrs) {
+    const el = document.createElementNS(SVG_NS, tag);
+    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+    return el;
+  }
+
+  /** Punto sul cerchio di centro (100, 100): angolo 0 in alto, positivo in senso orario. */
+  function gaugePoint(angle, r) {
+    const rad = (angle * Math.PI) / 180;
+    return [100 + r * Math.sin(rad), 100 - r * Math.cos(rad)];
+  }
+
+  function buildGauge() {
+    const svg = $('gauge');
+    const [sx, sy] = gaugePoint(-GAUGE_SWEEP / 2, 88);
+    const [ex, ey] = gaugePoint(GAUGE_SWEEP / 2, 88);
+    const arc = `M ${sx} ${sy} A 88 88 0 1 1 ${ex} ${ey}`;
+    svg.append(
+      svgEl('path', { d: arc, class: 'gauge-track', pathLength: 100 }),
+      svgEl('path', { d: arc, class: 'gauge-fill', id: 'gauge-fill', pathLength: 100, 'stroke-dasharray': '0 100' }),
+    );
+    for (let v = 0; v <= GAUGE_MAX_KMH; v += 1) {
+      const major = v % 10 === 0;
+      const len = major ? 12 : v % 5 === 0 ? 8 : 4;
+      const [x1, y1] = gaugePoint(gaugeAngle(v), 79);
+      const [x2, y2] = gaugePoint(gaugeAngle(v), 79 - len);
+      svg.append(svgEl('line', { x1, y1, x2, y2, class: major ? 'gauge-tick major' : 'gauge-tick' }));
+      if (major) {
+        const [lx, ly] = gaugePoint(gaugeAngle(v), 58);
+        const label = svgEl('text', { x: lx, y: ly, class: 'gauge-label' });
+        label.textContent = v;
+        svg.append(label);
+      }
+    }
+    const value = svgEl('text', { x: 100, y: 160, class: 'gauge-value', id: 'gauge-value' });
+    value.textContent = '0';
+    const needle = svgEl('g', { class: 'gauge-needle', id: 'gauge-needle' });
+    needle.append(svgEl('line', { x1: 100, y1: 112, x2: 100, y2: 26 }), svgEl('circle', { cx: 100, cy: 100, r: 7 }));
+    svg.append(value, needle);
+  }
+
+  function renderGauge(speedKmh) {
+    $('gauge-needle').style.transform = `rotate(${gaugeAngle(speedKmh)}deg)`;
+    $('gauge-fill').setAttribute('stroke-dasharray', `${(Math.min(speedKmh, GAUGE_MAX_KMH) / GAUGE_MAX_KMH) * 100} 100`);
+    $('gauge-value').textContent = String(Math.round(speedKmh));
+  }
+
+  function applySpeedStyle() {
+    const analog = prefs.speedStyle === 'analog';
+    $('speed').hidden = analog;
+    $('gauge').toggleAttribute('hidden', !analog); // su un svg la proprietà hidden non esiste
+  }
+
+  function toggleSpeedStyle() {
+    prefs.speedStyle = prefs.speedStyle === 'analog' ? 'digital' : 'analog';
+    savePrefs();
+    applySpeedStyle();
   }
 
   /** Km totali in home: uscite salvate più quella in corso, così crescono mentre pedali. */
@@ -910,6 +977,13 @@ ${points}
       render();
     });
     $('btn-finish').addEventListener('click', finishRide);
+    $('speed-box').addEventListener('click', toggleSpeedStyle);
+    $('speed-box').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleSpeedStyle();
+      }
+    });
 
     $('btn-voice').addEventListener('click', () => {
       prefs.voice = !prefs.voice;
@@ -945,6 +1019,8 @@ ${points}
     });
   }
 
+  buildGauge();
+  applySpeedStyle();
   bindEvents();
   setupMic();
   setupLock();
