@@ -1,35 +1,46 @@
-// Genera il logo con la bici (icons/logo.svg e i PNG) senza dipendenze: node tools/make-icons.mjs
+// Genera il logo con la bici in movimento (icons/logo.svg e i PNG) senza dipendenze: node tools/make-icons.mjs
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
 
-const BG = [15, 27, 45];
-const ACCENT = [255, 122, 26];
-const WHITE = [255, 255, 255];
+const BG = [255, 122, 26];
+const BIKE = [15, 27, 45];
+const SPEED = [255, 255, 255];
 const hex = (c) => `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 
-// Disegno della bici su una griglia 0..100, dentro la zona sicura delle icone Android.
-const WHEELS = [{ x: 28, y: 62, r: 15 }, { x: 72, y: 62, r: 15 }];
-const WHEEL_WIDTH = 4.5;
-const FRAME_WIDTH = 4;
-const FRAME = [
-  [28, 62, 46, 62], // fodero basso
-  [46, 62, 40, 42], // piantone
-  [40, 42, 28, 62], // fodero alto
-  [40, 42, 64, 42], // tubo orizzontale
-  [64, 42, 46, 62], // tubo obliquo
-  [72, 62, 62, 34], // forcella e sterzo
-  [62, 34, 70, 32], // manubrio
-  [36, 37, 46, 37], // sella
-  [40, 42, 41, 37], // reggisella
+// Disegno su una griglia 0..100. La bici è inclinata in avanti per dare l'idea della velocità.
+const LEAN = 0.2;
+const LEAN_BASE_Y = 58;
+const WHEELS = [{ x: 37, y: 58, r: 13 }, { x: 74, y: 58, r: 13 }];
+const WHEEL_WIDTH = 5.5;
+const FRAME_WIDTH = 5;
+const FRAME_LINES = [
+  [37, 58, 52, 58], // fodero basso
+  [52, 58, 46, 36], // piantone
+  [46, 36, 37, 58], // fodero alto
+  [46, 36, 67, 36], // tubo orizzontale
+  [67, 36, 52, 58], // tubo obliquo
+  [74, 58, 65, 29], // forcella e sterzo
+  [65, 29, 74, 28], // manubrio
+  [40, 32, 50, 32], // sella
 ];
+const SPEED_WIDTH = 4.5;
+const SPEED_LINES = [
+  [22, 29, 38, 29],
+  [15, 38, 33, 38],
+  [12, 47, 24, 47],
+];
+const CORNER = 22;
+const MASKABLE_SCALE = 0.86;
+const SAFE_RADIUS = 40; // Android non ritaglia mai dentro questo cerchio
 
 function logoSvg() {
   const wheels = WHEELS
-    .map((w) => `<circle cx="${w.x}" cy="${w.y}" r="${w.r}" stroke="${hex(ACCENT)}" stroke-width="${WHEEL_WIDTH}"/>`)
+    .map((w) => `<circle cx="${w.x}" cy="${w.y}" r="${w.r}" stroke-width="${WHEEL_WIDTH}"/>`)
     .join('');
-  const frame = FRAME.map(([x1, y1, x2, y2]) => `M${x1} ${y1}L${x2} ${y2}`).join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="${hex(BG)}"/><g fill="none">${wheels}<path d="${frame}" stroke="${hex(WHITE)}" stroke-width="${FRAME_WIDTH}" stroke-linecap="round" stroke-linejoin="round"/></g></svg>\n`;
+  const path = (lines) => lines.map(([x1, y1, x2, y2]) => `M${x1} ${y1}L${x2} ${y2}`).join('');
+  const lean = `matrix(1 0 ${-LEAN} 1 ${LEAN * LEAN_BASE_Y} 0)`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="${CORNER}" fill="${hex(BG)}"/><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="${path(SPEED_LINES)}" stroke="${hex(SPEED)}" stroke-width="${SPEED_WIDTH}"/><g transform="${lean}" stroke="${hex(BIKE)}">${wheels}<path d="${path(FRAME_LINES)}" stroke-width="${FRAME_WIDTH}"/></g></g></svg>\n`;
 }
 
 const crcTable = Array.from({ length: 256 }, (_, n) => {
@@ -59,27 +70,50 @@ function segmentDist(px, py, ax, ay, bx, by) {
   return Math.hypot(px - ax - t * dx, py - ay - t * dy);
 }
 
-/** Colore del punto (x, y) sulla griglia 0..100. */
-function shade(x, y) {
-  if (FRAME.some(([x1, y1, x2, y2]) => segmentDist(x, y, x1, y1, x2, y2) < FRAME_WIDTH / 2)) return WHITE;
-  if (WHEELS.some((w) => Math.abs(Math.hypot(x - w.x, y - w.y) - w.r) < WHEEL_WIDTH / 2)) return ACCENT;
-  return BG;
+const nearLines = (x, y, lines, width) =>
+  lines.some(([x1, y1, x2, y2]) => segmentDist(x, y, x1, y1, x2, y2) < width / 2);
+
+/** Colore del disegno nel punto (x, y) della griglia; null = sfondo. */
+function artColor(x, y) {
+  const bx = x + LEAN * (y - LEAN_BASE_Y);
+  if (nearLines(bx, y, FRAME_LINES, FRAME_WIDTH)) return BIKE;
+  if (WHEELS.some((w) => Math.abs(Math.hypot(bx - w.x, y - w.y) - w.r) < WHEEL_WIDTH / 2)) return BIKE;
+  if (nearLines(x, y, SPEED_LINES, SPEED_WIDTH)) return SPEED;
+  return null;
 }
 
-function png(size) {
+function insideRoundedSquare(x, y) {
+  const dx = Math.max(CORNER - x, x - (100 - CORNER), 0);
+  const dy = Math.max(CORNER - y, y - (100 - CORNER), 0);
+  return Math.hypot(dx, dy) <= CORNER;
+}
+
+/** rounded: angoli trasparenti, per l'icona normale. Altrimenti sfondo pieno, per quella adattiva di Android. */
+function shade(x, y, { rounded, scale }) {
+  if (rounded && !insideRoundedSquare(x, y)) return null;
+  const art = artColor(50 + (x - 50) / scale, 50 + (y - 50) / scale);
+  return art || BG;
+}
+
+function png(size, options) {
   const samples = 3;
   const rows = [];
   for (let py = 0; py < size; py++) {
-    const row = Buffer.alloc(size * 3 + 1);
+    const row = Buffer.alloc(size * 4 + 1);
     for (let px = 0; px < size; px++) {
       const sum = [0, 0, 0];
+      let covered = 0;
       for (let i = 0; i < samples; i++) {
         for (let j = 0; j < samples; j++) {
-          const c = shade(((px + (i + 0.5) / samples) / size) * 100, ((py + (j + 0.5) / samples) / size) * 100);
+          const c = shade(((px + (i + 0.5) / samples) / size) * 100, ((py + (j + 0.5) / samples) / size) * 100, options);
+          if (!c) continue;
+          covered++;
           for (let k = 0; k < 3; k++) sum[k] += c[k];
         }
       }
-      for (let k = 0; k < 3; k++) row[1 + px * 3 + k] = Math.round(sum[k] / samples ** 2);
+      const at = 1 + px * 4;
+      for (let k = 0; k < 3; k++) row[at + k] = covered ? Math.round(sum[k] / covered) : 0;
+      row[at + 3] = Math.round((covered / samples ** 2) * 255);
     }
     rows.push(row);
   }
@@ -87,7 +121,7 @@ function png(size) {
   header.writeUInt32BE(size, 0);
   header.writeUInt32BE(size, 4);
   header[8] = 8;
-  header[9] = 2;
+  header[9] = 6;
   return Buffer.concat([
     Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
     chunk('IHDR', header),
@@ -96,8 +130,24 @@ function png(size) {
   ]);
 }
 
+/** Si ferma se il disegno adattivo esce dalla zona che Android lascia sempre visibile. */
+function checkSafeZone() {
+  let farthest = 0;
+  for (let x = 0; x <= 100; x += 0.25) {
+    for (let y = 0; y <= 100; y += 0.25) {
+      if (artColor(50 + (x - 50) / MASKABLE_SCALE, 50 + (y - 50) / MASKABLE_SCALE)) {
+        farthest = Math.max(farthest, Math.hypot(x - 50, y - 50));
+      }
+    }
+  }
+  if (farthest > SAFE_RADIUS) throw new Error(`Il logo esce dalla zona sicura: ${farthest.toFixed(1)} > ${SAFE_RADIUS}`);
+  console.log(`Zona sicura rispettata: ${farthest.toFixed(1)} su ${SAFE_RADIUS}`);
+}
+
+checkSafeZone();
 mkdirSync(new URL('../icons/', import.meta.url), { recursive: true });
 writeFileSync(new URL('../icons/logo.svg', import.meta.url), logoSvg());
 for (const size of [192, 512]) {
-  writeFileSync(new URL(`../icons/icon-${size}.png`, import.meta.url), png(size));
+  writeFileSync(new URL(`../icons/icon-${size}.png`, import.meta.url), png(size, { rounded: true, scale: 1 }));
+  writeFileSync(new URL(`../icons/maskable-${size}.png`, import.meta.url), png(size, { rounded: false, scale: MASKABLE_SCALE }));
 }

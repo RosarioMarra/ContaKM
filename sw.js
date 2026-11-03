@@ -1,7 +1,7 @@
 // Fa funzionare l'app senza rete: il conta km non deve mai dipendere dal segnale.
 // Il navigatore (ricerca e percorso) resta online; le mappe già viste restano in memoria.
 
-const SHELL_CACHE = 'contakm-shell-v2';
+const SHELL_CACHE = 'contakm-shell-v4';
 const TILE_CACHE = 'contakm-tiles-v1';
 const MAX_TILES = 1500;
 
@@ -20,12 +20,17 @@ const SHELL = [
   'js/store.js',
   'vendor/leaflet/leaflet.js',
   'vendor/leaflet/leaflet.css',
+  'vendor/maplibre/maplibre-gl.js',
+  'vendor/maplibre/maplibre-gl.css',
+  'vendor/maplibre/leaflet-maplibre-gl.js',
   'icons/logo.svg',
   'icons/icon-192.png',
   'icons/icon-512.png',
+  'icons/maskable-192.png',
+  'icons/maskable-512.png',
 ];
 
-const TILE_HOST = /(^|\.)tile(-cyclosm)?\.openstreetmap\.(org|fr)$/;
+const TILE_HOST = /(^|\.)(tile\.openstreetmap\.org|tiles\.openfreemap\.org)$/;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(SHELL_CACHE).then((cache) => cache.addAll(SHELL)));
