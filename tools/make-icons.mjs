@@ -1,46 +1,33 @@
-// Genera il logo con la bici in movimento (icons/logo.svg e i PNG) senza dipendenze: node tools/make-icons.mjs
+// Genera il logo col tachimetro (icons/logo.svg e i PNG) senza dipendenze: node tools/make-icons.mjs
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
 
-const BG = [255, 122, 26];
-const BIKE = [15, 27, 45];
-const SPEED = [255, 255, 255];
+const BG = [11, 17, 28];
+const DIAL = [255, 255, 255];
+const NEEDLE = [255, 122, 26];
 const hex = (c) => `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 
-// Disegno su una griglia 0..100. La bici è inclinata in avanti per dare l'idea della velocità.
-const LEAN = 0.2;
-const LEAN_BASE_Y = 58;
-const WHEELS = [{ x: 37, y: 58, r: 13 }, { x: 74, y: 58, r: 13 }];
-const WHEEL_WIDTH = 5.5;
-const FRAME_WIDTH = 5;
-const FRAME_LINES = [
-  [37, 58, 52, 58], // fodero basso
-  [52, 58, 46, 36], // piantone
-  [46, 36, 37, 58], // fodero alto
-  [46, 36, 67, 36], // tubo orizzontale
-  [67, 36, 52, 58], // tubo obliquo
-  [74, 58, 65, 29], // forcella e sterzo
-  [65, 29, 74, 28], // manubrio
-  [40, 32, 50, 32], // sella
-];
-const SPEED_WIDTH = 4.5;
-const SPEED_LINES = [
-  [22, 29, 38, 29],
-  [15, 38, 33, 38],
-  [12, 47, 24, 47],
-];
+// Disegno su una griglia 0..100. Il centro è più in basso di 50 per compensare l'apertura del quadrante.
+const CX = 50;
+const CY = 54;
+const DIAL_RADIUS = 29;
+const DIAL_WIDTH = 9;
+const DIAL_GAP_DEG = 90; // apertura in basso
+const NEEDLE_TIP = [61.3, 42.7];
+const NEEDLE_WIDTH = 7;
+const HUB_RADIUS = 7;
 const CORNER = 22;
-const MASKABLE_SCALE = 0.86;
+const ICON_SCALE = 1.15;
+const MASKABLE_SCALE = 1.05;
 const SAFE_RADIUS = 40; // Android non ritaglia mai dentro questo cerchio
 
 function logoSvg() {
-  const wheels = WHEELS
-    .map((w) => `<circle cx="${w.x}" cy="${w.y}" r="${w.r}" stroke-width="${WHEEL_WIDTH}"/>`)
-    .join('');
-  const path = (lines) => lines.map(([x1, y1, x2, y2]) => `M${x1} ${y1}L${x2} ${y2}`).join('');
-  const lean = `matrix(1 0 ${-LEAN} 1 ${LEAN * LEAN_BASE_Y} 0)`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="${CORNER}" fill="${hex(BG)}"/><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="${path(SPEED_LINES)}" stroke="${hex(SPEED)}" stroke-width="${SPEED_WIDTH}"/><g transform="${lean}" stroke="${hex(BIKE)}">${wheels}<path d="${path(FRAME_LINES)}" stroke-width="${FRAME_WIDTH}"/></g></g></svg>\n`;
+  const half = ((DIAL_GAP_DEG / 2) * Math.PI) / 180;
+  const dx = +(DIAL_RADIUS * Math.sin(half)).toFixed(2);
+  const dy = +(DIAL_RADIUS * Math.cos(half)).toFixed(2);
+  const dial = `M${CX - dx} ${CY + dy}A${DIAL_RADIUS} ${DIAL_RADIUS} 0 1 1 ${CX + dx} ${CY + dy}`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="${CORNER}" fill="${hex(BG)}"/><g transform="translate(50 50) scale(${ICON_SCALE}) translate(-50 -50)" fill="none" stroke-linecap="round"><path d="${dial}" stroke="${hex(DIAL)}" stroke-width="${DIAL_WIDTH}"/><path d="M${CX} ${CY}L${NEEDLE_TIP[0]} ${NEEDLE_TIP[1]}" stroke="${hex(NEEDLE)}" stroke-width="${NEEDLE_WIDTH}"/><circle cx="${CX}" cy="${CY}" r="${HUB_RADIUS}" fill="${hex(NEEDLE)}"/></g></svg>\n`;
 }
 
 const crcTable = Array.from({ length: 256 }, (_, n) => {
@@ -70,15 +57,21 @@ function segmentDist(px, py, ax, ay, bx, by) {
   return Math.hypot(px - ax - t * dx, py - ay - t * dy);
 }
 
-const nearLines = (x, y, lines, width) =>
-  lines.some(([x1, y1, x2, y2]) => segmentDist(x, y, x1, y1, x2, y2) < width / 2);
+/** Vero se il punto cade sull'arco del quadrante, estremi arrotondati compresi. */
+function onDial(x, y) {
+  const half = ((DIAL_GAP_DEG / 2) * Math.PI) / 180;
+  const fromBottom = Math.abs(Math.atan2(x - CX, y - CY));
+  if (fromBottom >= half) return Math.abs(Math.hypot(x - CX, y - CY) - DIAL_RADIUS) < DIAL_WIDTH / 2;
+  const endX = DIAL_RADIUS * Math.sin(half);
+  const endY = CY + DIAL_RADIUS * Math.cos(half);
+  return Math.min(Math.hypot(x - (CX - endX), y - endY), Math.hypot(x - (CX + endX), y - endY)) < DIAL_WIDTH / 2;
+}
 
 /** Colore del disegno nel punto (x, y) della griglia; null = sfondo. */
 function artColor(x, y) {
-  const bx = x + LEAN * (y - LEAN_BASE_Y);
-  if (nearLines(bx, y, FRAME_LINES, FRAME_WIDTH)) return BIKE;
-  if (WHEELS.some((w) => Math.abs(Math.hypot(bx - w.x, y - w.y) - w.r) < WHEEL_WIDTH / 2)) return BIKE;
-  if (nearLines(x, y, SPEED_LINES, SPEED_WIDTH)) return SPEED;
+  if (Math.hypot(x - CX, y - CY) < HUB_RADIUS) return NEEDLE;
+  if (segmentDist(x, y, CX, CY, NEEDLE_TIP[0], NEEDLE_TIP[1]) < NEEDLE_WIDTH / 2) return NEEDLE;
+  if (onDial(x, y)) return DIAL;
   return null;
 }
 
@@ -96,7 +89,7 @@ function shade(x, y, { rounded, scale }) {
 }
 
 function png(size, options) {
-  const samples = 3;
+  const samples = 4;
   const rows = [];
   for (let py = 0; py < size; py++) {
     const row = Buffer.alloc(size * 4 + 1);
@@ -148,6 +141,6 @@ checkSafeZone();
 mkdirSync(new URL('../icons/', import.meta.url), { recursive: true });
 writeFileSync(new URL('../icons/logo.svg', import.meta.url), logoSvg());
 for (const size of [192, 512]) {
-  writeFileSync(new URL(`../icons/icon-${size}.png`, import.meta.url), png(size, { rounded: true, scale: 1 }));
+  writeFileSync(new URL(`../icons/icon-${size}.png`, import.meta.url), png(size, { rounded: true, scale: ICON_SCALE }));
   writeFileSync(new URL(`../icons/maskable-${size}.png`, import.meta.url), png(size, { rounded: false, scale: MASKABLE_SCALE }));
 }
