@@ -34,18 +34,68 @@
   };
   const STYLES = {
     classic: { ...BASE, kickstand: true, bottle: true, reflectors: true, double: true },
-    city: { ...BASE, seat: [-0.17, 0.8], head: [0.36, 0.9], headLow: [0.41, 0.72], tire: 0.03, bar: 'riser', top: 'low', saddleY: 0.97, fenders: true, rack: true, lamp: true, chainguard: true, tanwall: true, kickstand: true, comfort: true, reflectors: true },
+    city: { ...BASE, seat: [-0.17, 0.8], head: [0.36, 0.9], headLow: [0.41, 0.72], tire: 0.03, bar: 'riser', top: 'low', low: [[0.15, 0.43], [0.0, 0.34], [0.19, 0.57]], saddleY: 0.97, fenders: true, rack: true, lamp: true, chainguard: true, tanwall: true, kickstand: true, comfort: true, reflectors: true },
     mtb: { ...BASE, seat: [-0.15, 0.76], head: [0.4, 0.86], headLow: [0.45, 0.66], tube: 0.03, tire: 0.042, bar: 'wide', fork: 'suspension', top: 'sloped', saddleY: 0.97, knobby: true, bottle: true },
     road: { ...BASE, seat: [-0.17, 0.86], head: [0.4, 0.85], headLow: [0.43, 0.72], tube: 0.02, tire: 0.018, bar: 'drop', saddleY: 1.01, bottle: true, double: true },
 
-    'e-city': { ...BASE, seat: [-0.17, 0.8], head: [0.36, 0.9], headLow: [0.41, 0.72], tire: 0.032, bar: 'riser', top: 'low', saddleY: 0.97, fenders: true, rack: true, lamp: true, chainguard: true, battery: 'rack', motor: 'mid', display: true, tailLight: true, tanwall: true, kickstand: true, comfort: true },
+    'e-city': { ...BASE, seat: [-0.17, 0.8], head: [0.36, 0.9], headLow: [0.41, 0.72], tire: 0.032, bar: 'riser', top: 'low', low: [[0.15, 0.43], [0.0, 0.34], [0.19, 0.57]], saddleY: 0.97, fenders: true, rack: true, lamp: true, chainguard: true, battery: 'rack', motor: 'mid', display: true, tailLight: true, tanwall: true, kickstand: true, comfort: true },
     'e-trekking': { ...BASE, seat: [-0.16, 0.8], head: [0.39, 0.88], headLow: [0.43, 0.7], tube: 0.027, tire: 0.031, fork: 'suspension', top: 'sloped', saddleY: 0.98, fenders: true, rack: true, lamp: true, battery: 'integrated', motor: 'mid', display: true, tailLight: true, kickstand: true },
-    'e-mtb': { ...BASE, seat: [-0.15, 0.76], head: [0.41, 0.86], headLow: [0.46, 0.66], tube: 0.034, tire: 0.047, bar: 'wide', fork: 'suspension', top: 'sloped', saddleY: 0.97, knobby: true, battery: 'integrated', motor: 'mid', display: true, rearShock: true },
+    'e-mtb': { ...BASE, seat: [-0.15, 0.8], head: [0.41, 0.99], headLow: [0.46, 0.79], tube: 0.034, tire: 0.047, bar: 'wide', fork: 'suspension', top: 'sloped', saddleY: 1.02, knobby: true, battery: 'integrated', motor: 'mid', display: true, rearShock: true },
     'e-gravel': { ...BASE, seat: [-0.17, 0.85], head: [0.4, 0.84], headLow: [0.43, 0.71], tube: 0.026, tire: 0.024, bar: 'drop', saddleY: 1.0, battery: 'integrated', motor: 'mid', motorSize: 0.8, tanwall: true, bottle: true },
     'e-cargo': { ...BASE, rear: -0.95, rearR: 0.26, tire: 0.032, seat: [-0.2, 0.8], head: [0.38, 0.88], headLow: [0.42, 0.7], tube: 0.03, top: 'sloped', saddleY: 0.97, longtail: true, fenders: true, lamp: true, battery: 'integrated', motor: 'mid', display: true, tailLight: true, bar: 'riser', kickstand: true, comfort: true },
     'e-folding': { ...BASE, R: 0.25, tire: 0.034, rear: -0.42, front: 0.44, bb: [-0.03, 0.26], seat: [-0.12, 0.5], head: [0.33, 0.66], headLow: [0.31, 0.5], tube: 0.032, top: 'fold', saddleY: 0.95, battery: 'integrated', motor: 'hub', fenders: true, lamp: true, tailLight: true, kickstand: true },
     'e-fat': { ...BASE, R: 0.32, tire: 0.075, rear: -0.57, front: 0.6, bb: [-0.04, 0.33], seat: [-0.16, 0.82], head: [0.41, 0.9], headLow: [0.46, 0.72], forkZ: 0.095, tube: 0.032, bar: 'wide', top: 'sloped', saddleY: 0.99, knobby: true, battery: 'integrated', motor: 'hub', display: true, lamp: true },
   };
+  /** Distanza di un punto da un segmento, nel piano della bici. */
+  function segDist(p, a, b) {
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy)));
+    return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy);
+  }
+
+  /** Raggio esterno di una ruota: gomma, tasselli e parafango compresi. */
+  const wheelOuter = (S, R) => R + S.tire * (S.tire > 0.06 ? 1.15 : 1) + (S.knobby ? S.tire * 0.8 : 0) + (S.fenders ? 0.05 : 0);
+
+  /** Tubi del telaio vicini alla ruota anteriore, con il loro spessore (batteria integrata compresa). */
+  function frontTubes(S) {
+    const T = S.tube;
+    const integrated = S.battery === 'integrated';
+    if (S.top === 'low') {
+      const [l1, l2, u1] = S.low;
+      return [[S.headLow, l1, T * 1.15], [l1, l2, T * 1.15], [[S.head[0] - 0.01, S.head[1] - 0.06], u1, T * 0.85]];
+    }
+    if (S.top === 'fold') return [[[S.seat[0] + 0.02, S.seat[1] - 0.08], S.headLow, T * (integrated ? 2 : 1.5)]];
+    // Con la batteria integrata il pacco sporge sotto il tubo fino a 2,1 volte lo spessore: conta il più grosso dei due.
+    return [[S.bb, S.headLow, T * (integrated ? 2.1 : 1.15)]];
+  }
+
+  const CLEARANCE = 0.02; // almeno 2 cm tra gomma (o parafango) e telaio
+
+  /**
+   * Sistema le misure perché le ruote non entrino mai nel telaio, come in una bici vera:
+   * prima la ruota anteriore va un po' avanti (forcella più inclinata, al massimo 12 cm),
+   * poi, se non basta, tubo sterzo e manubrio salgono (forcella più lunga, come le ammortizzate).
+   * Dietro, se serve, i foderi si allungano.
+   */
+  function settle(base) {
+    const S = { ...base, head: [...base.head], headLow: [...base.headLow] };
+    const rearR = S.rearR || S.R;
+    const frontGap = () => Math.min(...frontTubes(S).map(([a, b, r]) => segDist([S.front, S.R], a, b) - r)) - wheelOuter(S, S.R);
+    const rearGap = () => segDist([S.rear, rearR], S.bb, S.seat) - S.tube - wheelOuter(S, rearR);
+    for (let i = 0; i < 120 && frontGap() < CLEARANCE; i++) {
+      if (S.front - base.front < 0.12) {
+        S.front += 0.005;
+      } else {
+        S.head[1] += 0.005;
+        S.headLow[1] += 0.005;
+      }
+    }
+    for (let i = 0; i < 80 && rearGap() < CLEARANCE; i++) S.rear -= 0.005;
+    S.gaps = { front: frontGap(), rear: rearGap() };
+    return S;
+  }
+
   const LIFT = -0.5; // la scena ha il centro a metà altezza: il suolo è a y = -0,5
 
   const v3 = (p, z = 0) => new THREE.Vector3(p[0], p[1], p.length > 2 ? p[2] : z);
@@ -74,21 +124,6 @@
 
   // ---------- Materiali ----------
 
-  /** Sfumatura per i fasci di luce: piena alla punta del cono (la lampada), trasparente alla base. */
-  function beamFade() {
-    const c = document.createElement('canvas');
-    c.width = 4;
-    c.height = 128;
-    const x = c.getContext('2d');
-    const g = x.createLinearGradient(0, 0, 0, 128);
-    g.addColorStop(0, '#fff');
-    g.addColorStop(0.35, '#777');
-    g.addColorStop(1, '#000');
-    x.fillStyle = g;
-    x.fillRect(0, 0, 4, 128);
-    return new THREE.CanvasTexture(c);
-  }
-
   function makeMaterials(color) {
     const std = (c, metalness, roughness) => new THREE.MeshStandardMaterial({ color: c, metalness, roughness });
     const glow = (c, i) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: i });
@@ -112,9 +147,6 @@
       tan: std(0xb98a5a, 0, 0.8),
       reflector: new THREE.MeshStandardMaterial({ color: 0xff8a1f, emissive: 0xff6a00, emissiveIntensity: 0.35, roughness: 0.3 }),
       lens: new THREE.MeshPhysicalMaterial({ color: 0xffffff, emissive: 0xfff1c4, emissiveIntensity: 1.4, roughness: 0.05, clearcoat: 1 }),
-      // Fasci di luce: forti vicino alla lampada, svaniscono nell'aria
-      beam: new THREE.MeshBasicMaterial({ color: 0xfff1c4, alphaMap: beamFade(), transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }),
-      redBeam: new THREE.MeshBasicMaterial({ color: 0xff3030, alphaMap: beamFade(), transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }),
       cable: std(0x15181c, 0.1, 0.5),
       rubber: std(0x2b3036, 0, 0.9),
       bottle: new THREE.MeshPhysicalMaterial({ color: 0xe9eef3, roughness: 0.35, transmission: 0.25, thickness: 0.02 }),
@@ -207,7 +239,8 @@
     }
     if (side === 'rear') {
       for (let i = 0; i < 10; i++) {
-        const cog = new THREE.Mesh(new THREE.TorusGeometry(0.03 + i * 0.008, 0.005, 6, 28), mat.chain);
+        // Pacco pignoni: il più grande verso i raggi, il più piccolo verso l'esterno (come sulle bici vere)
+        const cog = new THREE.Mesh(new THREE.TorusGeometry(0.03 + (9 - i) * 0.008, 0.005, 6, 28), mat.chain);
         cog.position.z = 0.045 + i * 0.006;
         g.add(cog);
         parts.chain.push(cog);
@@ -223,7 +256,7 @@
   }
 
   function buildBike(styleName, mat, extraBattery) {
-    const S = STYLES[styleName] || STYLES.classic;
+    const S = settle(STYLES[styleName] || STYLES.classic);
     const parts = { tyres: [], brakes: [], chain: [], battery: [], saddle: [], handlebar: [], bell: [], wheels: [], lights: [] };
     const bike = new THREE.Group();
     const rearR = S.rearR || S.R;
@@ -264,8 +297,9 @@
       }
     } else if (S.top === 'low') {
       // Telaio aperto: due tubi curvi bassi, si sale senza alzare la gamba.
-      bike.add(curve([headLow, [0.2, 0.42], [0.04, 0.33], bb], T * 1.15, mat.frame));
-      bike.add(curve([[head.x - 0.01, head.y - 0.06], [0.22, 0.56], [0.02, 0.46], [-0.08, 0.48]], T * 0.85, mat.frame));
+      const [l1, l2, u1] = S.low;
+      bike.add(curve([headLow, l1, l2, bb], T * 1.15, mat.frame));
+      bike.add(curve([[head.x - 0.01, head.y - 0.06], u1, [u1[0] - 0.2, 0.46], [-0.08, 0.48]], T * 0.85, mat.frame));
       bike.add(tube(bb, seat, T, mat.frame));
     } else {
       bike.add(tube(bb, seat, T, mat.frame));
@@ -595,29 +629,22 @@
     }
 
     // ---- Luci ----
-    // Faro: sulla forcella per le bici da città, sotto il manubrio per le altre. Il fascio è un cono che si apre.
-    const lampAt = S.lamp ? v3([headLow.x + 0.065, headLow.y + 0.02]) : v3([stemTop.x + 0.05, stemTop.y - 0.035]);
+    // Faro: davanti al tubo sterzo per le bici da città, sotto il manubrio per le altre.
+    const lampAt = S.lamp ? head.clone().lerp(headLow, 0.55).add(new THREE.Vector3(0.055, 0, 0)) : v3([stemTop.x + 0.05, stemTop.y - 0.035]);
     const lampBody = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.022, 0.06, 18), mat.dark);
     lampBody.rotation.z = Math.PI / 2;
     lampBody.position.copy(lampAt);
     const lens = new THREE.Mesh(new THREE.CircleGeometry(0.025, 20), mat.lens);
     lens.rotation.y = Math.PI / 2;
     lens.position.copy(lampAt).add(new THREE.Vector3(0.031, 0, 0));
-    const beam = new THREE.Mesh(new THREE.ConeGeometry(0.32, 1.3, 28, 1, true), mat.beam);
-    beam.rotation.z = Math.PI / 2;
-    beam.position.copy(lampAt).add(new THREE.Vector3(0.68, -0.06, 0));
-    beam.rotation.y = 0;
-    bike.add(lampBody, lens, beam);
+    bike.add(lampBody, lens);
     if (!S.lamp) bike.add(tube(v3([stemTop.x + 0.01, stemTop.y - 0.005]), lampAt, 0.005, mat.dark, 6));
     // Fanalino rosso: sul portapacchi o sul reggisella
     const tx = S.longtail ? rear.x - 0.39 : S.rack ? -0.675 : saddleX - 0.035;
     const ty = S.longtail ? 0.6 : S.rack ? 0.74 : S.saddleY - 0.13;
     const tailBody = box(0.022, 0.05, 0.034, mat.dark, [tx + 0.006, ty, 0]);
     const tailLens = box(0.006, 0.04, 0.028, mat.tail, [tx - 0.006, ty, 0]);
-    const tailGlow = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.45, 20, 1, true), mat.redBeam);
-    tailGlow.rotation.z = -Math.PI / 2;
-    tailGlow.position.set(tx - 0.24, ty - 0.02, 0);
-    bike.add(tailBody, tailLens, tailGlow);
+    bike.add(tailBody, tailLens);
     parts.lights = [lampBody, lens, tailBody, tailLens];
 
     // ---- Comandi del cambio e cavi ----
@@ -1094,5 +1121,5 @@
   }
 
   globalThis.ContaKM ??= {};
-  globalThis.ContaKM.bike3d = { mount, ring, STYLES: Object.keys(STYLES) };
+  globalThis.ContaKM.bike3d = { mount, ring, STYLES: Object.keys(STYLES), geometry: STYLES, settle };
 })();
