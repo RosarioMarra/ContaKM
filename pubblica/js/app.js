@@ -2,7 +2,7 @@
 
 (() => {
   const {
-    Ride, NavSession, arrowAngle, caloriesFor, fetchRoute, maneuverIcon, native, realGps, searchPlaces, simGps, store, summarize,
+    Ride, NavSession, arrowAngle, caloriesFor, fetchRoute, maneuverIcon, native, realGps, searchPlaces, simGps, store, summarize, trackSegments,
   } = globalThis.ContaKM;
 
   const L = window.L;
@@ -765,15 +765,16 @@
       statTile(String(Math.round(caloriesFor(r.distanceM, r.movingMs, prefs.weightKg))), 'kcal stimate'),
     );
     resetDeleteButton();
-    $('btn-gpx').hidden = r.track.length < 2;
+    const segments = trackSegments(r.track).map((s) => s.map((p) => [p[0], p[1]]));
+    $('btn-gpx').hidden = segments.length === 0;
     $('detail').showModal();
 
     const mapEl = $('detail-map');
-    mapEl.hidden = r.track.length < 2;
-    if (r.track.length >= 2) {
+    mapEl.hidden = segments.length === 0;
+    if (segments.length > 0) {
       detailMap = L.map(mapEl, { zoomControl: false, maxZoom: 19 });
       detailMap.attributionControl.setPrefix(false);
-      const line = L.polyline(r.track.map((p) => [p[0], p[1]]), { color: ROUTE_COLOR, weight: 6 });
+      const line = L.polyline(segments, { color: ROUTE_COLOR, weight: 6 });
       detailMap.fitBounds(line.getBounds(), { padding: [20, 20], animate: false });
       createTiles(detailMap);
       line.addTo(detailMap);
@@ -805,14 +806,15 @@
 
   function downloadGpx() {
     const r = detailRide;
-    const points = r.track
-      .map((p) => `<trkpt lat="${p[0]}" lon="${p[1]}"><time>${new Date(r.startedAt + p[2] * 1000).toISOString()}</time></trkpt>`)
+    const point = (p) => `<trkpt lat="${p[0]}" lon="${p[1]}"><time>${new Date(r.startedAt + p[2] * 1000).toISOString()}</time></trkpt>`;
+    const segments = trackSegments(r.track)
+      .map((s) => `<trkseg>\n${s.map(point).join('\n')}\n</trkseg>`)
       .join('\n');
     const gpx = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="ContaKM" xmlns="http://www.topografix.com/GPX/1/1">
-<trk><name>Uscita ${new Date(r.startedAt).toLocaleDateString('it-IT')}</name><type>cycling</type><trkseg>
-${points}
-</trkseg></trk>
+<trk><name>Uscita ${new Date(r.startedAt).toLocaleDateString('it-IT')}</name><type>cycling</type>
+${segments}
+</trk>
 </gpx>`;
     saveFile(`contakm-${new Date(r.startedAt).toISOString().slice(0, 10)}.gpx`, gpx, 'application/gpx+xml');
   }

@@ -111,3 +111,41 @@ test('una uscita salvata riparte in pausa con i suoi dati', () => {
   assert.equal(restored.distanceM, ride.distanceM);
   assert.equal(restored.startedAt, T0);
 });
+
+test('GPS sospeso in bici: niente linea dritta, km e tempo plausibili', () => {
+  const ride = new Ride();
+  ride.start(T0);
+  ride60s(ride, 6);
+  // Schermo spento per 3 minuti: il GPS torna 1 km più avanti (circa 20 km/h)
+  ride.update(fix(240, 360 + 1000, 6));
+  for (let s = 241; s <= 260; s++) {
+    ride.update(fix(s, 1360 + (s - 240) * 6, 6));
+    ride.tick(T0 + s * 1000);
+  }
+  const segments = ContaKM.trackSegments(ride.track);
+  assert.equal(segments.length, 2, 'due tratti separati');
+  assert.ok(Math.abs(ride.distanceM - 1480) < 40, `distanza ${ride.distanceM}`);
+  assert.ok(ride.avgSpeedMs < 8, `media ${ride.avgSpeedMs * 3.6} km/h`);
+});
+
+test('GPS sospeso con un salto impossibile in bici: il tratto mancante non si conta', () => {
+  const ride = new Ride();
+  ride.start(T0);
+  ride60s(ride, 6);
+  ride.update(fix(100, 360 + 2000, 6)); // 2 km in 40 s = 180 km/h
+  assert.ok(Math.abs(ride.distanceM - 360) < 10, `distanza ${ride.distanceM}`);
+  assert.equal(ContaKM.trackSegments(ride.track).length, 1);
+});
+
+test('il timer fermo in sottofondo non aggiunge tempo', () => {
+  const ride = new Ride();
+  ride.start(T0);
+  ride60s(ride, 6);
+  ride.tick(T0 + 300_000); // primo tick dopo 4 minuti di pausa del timer
+  assert.ok(ride.movingMs <= 65_000, `tempo ${ride.movingMs}`);
+});
+
+test('le uscite vecchie con un salto vengono divise in due tratti', () => {
+  const old = [[40, 14, 0], [40.0002, 14, 3], [40.0004, 14, 6], [40.0094, 14, 40], [40.0096, 14, 43]];
+  assert.equal(ContaKM.trackSegments(old).length, 2);
+});
