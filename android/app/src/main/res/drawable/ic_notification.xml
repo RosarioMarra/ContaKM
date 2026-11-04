@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icona della notifica "ContaKM sta registrando": il tachimetro del logo, in bianco su trasparente. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <path
+        android:pathData="M25.6 79.6A33.4 33.4 0 1 1 74.4 79.6"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="10"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M50 54L63 41"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="8"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M50 54m-8 0a8 8 0 1 0 16 0a8 8 0 1 0 -16 0"
+        android:fillColor="#FFFFFFFF" />
+</vector>

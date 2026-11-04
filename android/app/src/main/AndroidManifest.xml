@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application
         android:allowBackup="true"
@@ -38,10 +39,15 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- GPS per contare i km e per il navigatore (solo con l'app aperta) -->
+    <!-- GPS per contare i km e per il navigatore. Durante un'uscita continua a schermo spento
+         con la notifica fissa (servizio in primo piano di tipo location, dichiarato dal plugin). -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+
+    <!-- Il plugin delle notifiche serve solo a chiedere il permesso di mostrarle:
+         promemoria programmati e riavvio non servono (e il Play Store limita SCHEDULE_EXACT_ALARM). -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" tools:node="remove" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" tools:node="remove" />
 
     <!-- Il pulsante "Apri WeCity" deve poter vedere e aprire quell'app -->
     <queries>

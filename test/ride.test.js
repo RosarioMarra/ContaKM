@@ -149,3 +149,15 @@ test('le uscite vecchie con un salto vengono divise in due tratti', () => {
   const old = [[40, 14, 0], [40.0002, 14, 3], [40.0004, 14, 6], [40.0094, 14, 40], [40.0096, 14, 43]];
   assert.equal(ContaKM.trackSegments(old).length, 2);
 });
+
+test('in sottofondo con il GPS attivo e i timer rallentati il tempo si conta tutto', () => {
+  const ride = new Ride();
+  ride.start(T0);
+  ride.tick(T0);
+  for (let s = 0; s <= 300; s++) {
+    ride.update(fix(s, s * 6, 6));
+    if (s % 60 === 0) ride.tick(T0 + s * 1000); // Android: un tick al minuto
+  }
+  assert.ok(Math.abs(ride.movingMs - 300_000) <= 1000, `tempo ${ride.movingMs}`);
+  assert.ok(Math.abs(ride.avgSpeedMs - 6) < 0.3, `media ${ride.avgSpeedMs}`);
+});

@@ -2,6 +2,11 @@
 
 (() => {
   function watchPosition(onFix, onError) {
+    const native = globalThis.ContaKM?.native;
+    if (native?.isNative) {
+      native.watchPosition(onFix, onError);
+      return;
+    }
     if (!('geolocation' in navigator)) {
       onError({ code: 0 });
       return;

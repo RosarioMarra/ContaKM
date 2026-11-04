@@ -158,7 +158,9 @@
 
   function updateScreenLock() {
     if (native.isNative) {
-      native.keepAwake(ride.state === 'running' || Boolean(nav));
+      const active = ride.state === 'running' || Boolean(nav);
+      native.keepAwake(active);
+      if (!isDemo) native.backgroundTracking(active);
       return;
     }
     if (ride.state === 'running' || nav) keepScreenOn();

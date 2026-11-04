@@ -10,7 +10,6 @@
   const SIGNAL_LOST_MS = 8000;
   const GAP_MS = 8000;           // GPS sospeso (schermo spento, altra app): il percorso riparte da un nuovo tratto
   const MAX_GAP_SPEED_MS = 50 / KMH; // il tratto senza GPS si conta solo se è plausibile in bici
-  const MAX_TICK_MS = 5000;      // il timer fermo in sottofondo non deve regalare tempo
   const TRACK_STEP_M = 25;
   const MAX_TRACK_JUMP_M = 150;  // tra due punti salvati di seguito, oltre è un salto del GPS
   const CLIMB_STEP_M = 4;        // filtra il rumore dell'altitudine GPS
@@ -33,6 +32,7 @@
       this.anchor = null;
       this.lastFixAt = 0;
       this.lastTickAt = null;
+      this.trackingSince = 0; // da quando il GPS arriva senza interruzioni
       this.smoothAlt = null;
       this.climbRef = null;
     }
@@ -109,6 +109,7 @@
         this.movingMs += dt;
       }
       this.anchor = fix;
+      this.trackingSince = fix.time;
       this.addTrackPoint(fix, true);
     }
 
@@ -138,11 +139,15 @@
       }
     }
 
-    /** Da chiamare ogni secondo: aggiorna il tempo anche se il GPS tace. */
+    /**
+     * Da chiamare ogni secondo: aggiorna il tempo anche se il GPS tace.
+     * In sottofondo Android rallenta i timer: il tempo trascorso si conta tutto, ma solo dal momento
+     * in cui il GPS è tornato dopo un'interruzione (quello prima lo conta già bridgeGap).
+     */
     tick(now = Date.now()) {
       if (this.lastFixAt && now - this.lastFixAt > SIGNAL_LOST_MS) this.speedMs = 0;
       if (this.state === 'running' && this.moving && this.lastTickAt) {
-        this.movingMs += Math.min(now - this.lastTickAt, MAX_TICK_MS);
+        this.movingMs += Math.max(0, now - Math.max(this.lastTickAt, this.trackingSince));
       }
       this.lastTickAt = now;
     }

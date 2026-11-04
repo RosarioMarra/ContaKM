@@ -4,7 +4,8 @@
   "webDir": "pubblica",
   "backgroundColor": "#0f1b2d",
   "android": {
-    "allowMixedContent": false
+    "allowMixedContent": false,
+    "useLegacyBridge": true
   },
   "plugins": {
     "SystemBars": {

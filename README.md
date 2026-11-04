@@ -34,7 +34,9 @@ Il numero di satelliti non è disponibile nei browser: l'app mostra la precision
 
 ## App Android (Play Store)
 
-La cartella `android/` è l'app nativa fatta con Capacitor: contiene gli stessi file del sito, quindi funziona anche senza internet. Dentro l'app voce, schermo acceso, condivisione e "Apri WeCity" usano le funzioni di Android.
+La cartella `android/` è l'app nativa fatta con Capacitor: contiene gli stessi file del sito, quindi funziona anche senza internet. Dentro l'app voce, schermo acceso, condivisione e "Apri WeCity" usano le funzioni di Android. Durante un'uscita (o con il navigatore attivo) il GPS continua anche a schermo spento o con WeCity aperta, con la notifica fissa "ContaKM sta registrando l'uscita".
+
+Il servizio in primo piano di tipo posizione (`FOREGROUND_SERVICE_LOCATION`) va dichiarato nella Play Console, in Contenuti dell'app, con un breve video che mostra la notifica durante un'uscita.
 
 Serve una volta sola: Node, Java 21 e l'Android SDK (Android Studio lo installa da solo).
 
