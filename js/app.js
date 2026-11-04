@@ -2,7 +2,7 @@
 
 (() => {
   const {
-    Ride, NavSession, arrowAngle, caloriesFor, fetchRoute, maneuverIcon, native, realGps, searchPlaces, simGps, store, summarize, trackSegments,
+    Ride, NavSession, arrowAngle, bikes: bikeLib, caloriesFor, fetchRoute, maneuverIcon, native, realGps, searchPlaces, simGps, store, summarize, trackSegments,
   } = globalThis.ContaKM;
 
   const L = window.L;
@@ -41,6 +41,19 @@
 
   let ride = new Ride(store.loadCurrent());
   const prefs = store.loadPrefs();
+  let bikeList = store.loadBikes();
+
+  // Prima apertura con le bici: "La mia bici" prende uscite e manutenzione di prima.
+  {
+    const migrated = bikeLib.migrate(bikeList, store.loadHistory(), prefs);
+    if (migrated) {
+      bikeList = migrated.bikes;
+      store.saveBikes(bikeList);
+      store.saveHistory(migrated.history);
+      prefs.activeBikeId = migrated.activeBikeId;
+      store.savePrefs(prefs);
+    }
+  }
   let lastFix = null;
   let heading = null;
   let gpsStarted = false;
@@ -231,6 +244,7 @@
     $('stat-clock').textContent = clock(Date.now());
     renderTotal();
 
+    $('btn-bike-pick').setAttribute('aria-disabled', ride.state !== 'idle');
     $('btn-start').hidden = ride.state !== 'idle';
     $('btn-pause').hidden = ride.state !== 'running';
     $('btn-resume').hidden = ride.state !== 'paused';
@@ -464,7 +478,7 @@
 
   const routeOptions = () => ({
     heading,
-    bikeType: prefs.bikeType,
+    bikeType: activeBike().type,
   });
 
   async function chooseDestination(place) {
@@ -688,7 +702,8 @@
   // ---------- Uscite ----------
 
   function finishRide() {
-    const data = { ...ride.toJSON(), endedAt: Date.now() };
+    const bike = activeBike();
+    const data = { ...ride.toJSON(), endedAt: Date.now(), bikeId: bike.id };
     store.clearCurrent();
     ride = new Ride();
     announcedKmSteps = 0;
@@ -701,26 +716,52 @@
     }
     store.addToHistory(data);
     renderHistory();
+    renderBikes();
     openDetail(data, 'Uscita salvata');
-    if (kmSinceService() >= prefs.serviceEveryKm) {
-      toast('Ora di fare manutenzione alla bici: pulisci e lubrifica la catena');
+    const due = bikeLib.dueItems(bike, store.loadHistory(), bikeList);
+    if (due.length) {
+      toast(`Manutenzione per ${bike.name}: ${due.map((i) => i.label.toLowerCase()).join(', ')}`);
     }
   }
 
+  let historyFilter = 'all';
+
+  function renderHistoryFilter() {
+    const root = $('history-filter');
+    root.hidden = bikeList.length < 2;
+    if (!bikeList.some((b) => b.id === historyFilter)) historyFilter = 'all';
+    const options = [{ id: 'all', name: 'Tutte' }, ...bikeList];
+    root.replaceChildren(...options.map((o) => {
+      const btn = document.createElement('button');
+      btn.textContent = o.name;
+      btn.setAttribute('aria-pressed', o.id === historyFilter);
+      btn.addEventListener('click', () => {
+        historyFilter = o.id;
+        renderHistory();
+      });
+      return btn;
+    }));
+  }
+
   function renderHistory() {
-    const history = store.loadHistory();
+    const allRides = store.loadHistory();
+    renderHistoryFilter();
+    const filtered = historyFilter === 'all' ? allRides : bikeLib.ridesOf(findBike(historyFilter), allRides, bikeList);
+    const all = summarize(allRides);
+    historyM = all.totalM;
+    renderTotal();
+    const history = filtered;
     const s = summarize(history);
     $('week-km').textContent = number(s.weekM / 1000, 1);
     $('month-km').textContent = number(s.monthM / 1000, 1);
     $('total-km').textContent = number(s.totalM / 1000, 1);
     $('total-rides').textContent = s.rides;
-    historyM = s.totalM;
-    renderTotal();
 
+    // L'obiettivo della settimana vale per tutte le bici insieme.
     const goal = prefs.weeklyGoalKm;
     $('goal').hidden = !goal;
-    $('goal-text').textContent = `Obiettivo settimana: ${number(s.weekM / 1000, 1)} di ${goal} km`;
-    $('goal-fill').style.width = `${goal ? Math.min(100, (s.weekM / 1000 / goal) * 100) : 0}%`;
+    $('goal-text').textContent = `Obiettivo settimana: ${number(all.weekM / 1000, 1)} di ${goal} km`;
+    $('goal-fill').style.width = `${goal ? Math.min(100, (all.weekM / 1000 / goal) * 100) : 0}%`;
 
     $('records').hidden = s.rides === 0;
     $('record-long').textContent = km(s.longestM);
@@ -735,7 +776,8 @@
         btn.className = 'row';
         btn.append(
           textBlock('row-title', `${km(r.distanceM)} km`),
-          textBlock('row-sub', `${rideDate(r.startedAt)} · ${duration(r.movingMs)}`),
+          textBlock('row-sub', [rideDate(r.startedAt), duration(r.movingMs), bikeList.length > 1 ? bikeOf(r).name : '']
+            .filter(Boolean).join(' · ')),
         );
         btn.addEventListener('click', () => openDetail(r, rideDate(r.startedAt)));
         li.append(btn);
@@ -767,6 +809,9 @@
       statTile(String(Math.round(caloriesFor(r.distanceM, r.movingMs, prefs.weightKg))), 'kcal stimate'),
     );
     resetDeleteButton();
+    $('detail-bike-row').hidden = bikeList.length < 2;
+    $('detail-bike').replaceChildren(...bikeList.map((b) => new Option(b.name, b.id)));
+    $('detail-bike').value = bikeOf(r).id;
     const segments = trackSegments(r.track).map((s) => s.map((p) => [p[0], p[1]]));
     $('btn-gpx').hidden = segments.length === 0;
     $('detail').showModal();
@@ -877,21 +922,6 @@ ${segments}
     paint();
   }
 
-  function totalHistoryKm() {
-    return summarize(store.loadHistory()).totalM / 1000;
-  }
-
-  function kmSinceService() {
-    return Math.max(0, totalHistoryKm() - prefs.serviceAtKm);
-  }
-
-  function renderService() {
-    const done = kmSinceService();
-    $('service-text').textContent = `${number(done, 0)} km dall'ultima manutenzione, avviso a ${prefs.serviceEveryKm} km`;
-    $('service-fill').style.width = `${Math.min(100, (done / prefs.serviceEveryKm) * 100)}%`;
-    $('service-fill').dataset.due = done >= prefs.serviceEveryKm ? '1' : '';
-  }
-
   async function sharePosition() {
     if (!lastFix) {
       startGps();
@@ -920,8 +950,9 @@ ${segments}
     try {
       const added = store.importBackup(JSON.parse(await file.text()));
       toast(`Backup caricato: ${added} uscite aggiunte`);
+      bikeList = store.loadBikes();
       renderHistory();
-      renderService();
+      renderBikes();
     } catch {
       toast('Questo file non è un backup di ContaKM');
     }
@@ -930,7 +961,6 @@ ${segments}
   function setupSettings() {
     setupSegmented('set-accent', ACCENTS, 'accent');
     setupSegmented('set-km-alert', KM_ALERTS, 'kmAlert');
-    setupSegmented('set-bike', BIKE_TYPES, 'bikeType');
     setupToggle('set-wecity', 'wecity');
     $('set-wecity').addEventListener('click', render);
     $('btn-wecity').href = wecityLink();
@@ -942,13 +972,6 @@ ${segments}
     }
     setupStepper('set-weight', 'weightKg', 1, 30, 200, render);
     setupStepper('set-goal', 'weeklyGoalKm', 10, 0, 1000);
-    setupStepper('set-service', 'serviceEveryKm', 50, 50, 5000, renderService);
-    $('btn-service-done').addEventListener('click', () => {
-      prefs.serviceAtKm = totalHistoryKm();
-      savePrefs();
-      renderService();
-      toast('Manutenzione segnata');
-    });
     $('btn-share').addEventListener('click', sharePosition);
     $('btn-backup').addEventListener('click', exportBackup);
     $('btn-restore').addEventListener('click', () => $('restore-file').click());
@@ -959,6 +982,325 @@ ${segments}
     $('btn-demo').textContent = isDemo ? 'Esci dal giro simulato' : 'Prova il giro simulato';
     $('btn-demo').addEventListener('click', () => {
       location.search = isDemo ? '' : '?demo';
+    });
+  }
+
+  // ---------- Bici e manutenzione ----------
+
+  const BIKE_TYPE_LABEL = Object.fromEntries(BIKE_TYPES.map((t) => [t.value, t.label]));
+  const findBike = (id) => bikeList.find((b) => b.id === id);
+  const activeBike = () => findBike(prefs.activeBikeId) || bikeList[0];
+  const bikeOf = (r) => findBike(r.bikeId) || bikeList[0];
+  const longDate = (ms) => new Date(ms).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' });
+  let editingBikeId = null;
+  let editingItemId = null;
+
+  function saveBikes() {
+    store.saveBikes(bikeList);
+    renderBikes();
+  }
+
+  /** Tutto quello che mostra le bici: home, elenco in Altro e, se aperta, la scheda della bici. */
+  function renderBikes() {
+    renderBikePick();
+    renderBikeList();
+    if ($('bike').open) renderBikeSheet();
+  }
+
+  function bikeSub(b, history) {
+    const type = `${BIKE_TYPE_LABEL[b.type]}${b.electric ? ' elettrica' : ''}`;
+    return `${type} · ${number(bikeLib.bikeKm(b, history, bikeList), 0)} km`;
+  }
+
+  function renderBikePick() {
+    const b = activeBike();
+    $('bike-pick-name').textContent = b.name;
+    $('bike-pick-due').hidden = bikeLib.dueItems(b, store.loadHistory(), bikeList).length === 0;
+  }
+
+  function bikeRow(b, history, onClick) {
+    const li = document.createElement('li');
+    const btn = document.createElement('button');
+    btn.className = 'row';
+    btn.setAttribute('aria-current', b.id === activeBike().id);
+    const title = b.id === activeBike().id ? `${b.name} · in uso` : b.name;
+    btn.append(textBlock('row-title', title), textBlock('row-sub', bikeSub(b, history)));
+    const due = bikeLib.dueItems(b, history, bikeList).length;
+    if (due) btn.append(textBlock('row-sub row-due', due === 1 ? '1 manutenzione da fare' : `${due} manutenzioni da fare`));
+    btn.addEventListener('click', onClick);
+    li.append(btn);
+    return li;
+  }
+
+  function renderBikeList() {
+    const history = store.loadHistory();
+    $('bike-list').replaceChildren(...bikeList.map((b) => bikeRow(b, history, () => openBike(b.id))));
+  }
+
+  function setActiveBike(id) {
+    prefs.activeBikeId = id;
+    store.savePrefs(prefs);
+    renderBikes();
+  }
+
+  function openPicker() {
+    if (ride.state !== 'idle') {
+      toast('La bici si cambia a uscita finita');
+      return;
+    }
+    const history = store.loadHistory();
+    $('picker-list').replaceChildren(...bikeList.map((b) => bikeRow(b, history, () => {
+      setActiveBike(b.id);
+      $('bike-picker').close();
+      toast(`Bici: ${b.name}`);
+    })));
+    $('bike-picker').showModal();
+  }
+
+  function addBike() {
+    const b = bikeLib.createBike({ name: `Bici ${bikeList.length + 1}`, type: activeBike().type });
+    bikeList.push(b);
+    saveBikes();
+    openBike(b.id);
+    const name = $('bike-form').querySelector('[name="name"]');
+    name.focus();
+    name.select();
+  }
+
+  function openBike(id) {
+    editingBikeId = id;
+    fillBikeForm();
+    renderBikeSheet();
+    $('bike').showModal();
+    $('bike').scrollTop = 0;
+  }
+
+  function fillBikeForm() {
+    const b = findBike(editingBikeId);
+    const form = $('bike-form');
+    for (const input of form.querySelectorAll('input[name]')) input.value = b[input.name] ?? '';
+    paintBikeType();
+    $('bike-electric').setAttribute('aria-pressed', b.electric);
+  }
+
+  function paintBikeType() {
+    const b = findBike(editingBikeId);
+    $('bike-type').querySelectorAll('button').forEach((btn, i) => {
+      btn.setAttribute('aria-pressed', BIKE_TYPES[i].value === b?.type);
+    });
+  }
+
+  function maintLeftText(st) {
+    if (st.due) return 'da fare';
+    const parts = [];
+    if (st.kmLeft != null) parts.push(`${number(Math.max(0, st.kmLeft), 0)} km`);
+    if (st.daysLeft != null) {
+      parts.push(st.daysLeft > 60 ? `${Math.round(st.daysLeft / 30.44)} mesi` : `${Math.max(0, st.daysLeft)} giorni`);
+    }
+    return `tra ${parts.join(' o ')}`;
+  }
+
+  function intervalText(item) {
+    const parts = [];
+    if (item.everyKm) parts.push(`${number(item.everyKm, 0)} km`);
+    if (item.everyMonths) parts.push(item.everyMonths === 1 ? '1 mese' : `${item.everyMonths} mesi`);
+    return `Ogni ${parts.join(' o ')}`;
+  }
+
+  function maintRow(b, item, kmNow) {
+    const st = bikeLib.itemStatus(item, kmNow);
+    const li = document.createElement('li');
+    li.className = 'maint-item';
+    li.dataset.due = st.due ? '1' : '';
+
+    const head = document.createElement('div');
+    head.className = 'maint-head';
+    head.append(textBlock('maint-label', item.label), textBlock('maint-left', maintLeftText(st)));
+
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    const fill = document.createElement('div');
+    fill.className = 'bar-fill';
+    fill.style.width = `${Math.min(100, st.ratio * 100)}%`;
+    fill.dataset.due = st.due ? '1' : '';
+    bar.append(fill);
+
+    const last = item.log?.length
+      ? `Fatta il ${longDate(item.doneAt)} a ${number(item.doneAtKm, 0)} km`
+      : `Conteggio dal ${longDate(item.doneAt)} a ${number(item.doneAtKm, 0)} km`;
+
+    const actions = document.createElement('div');
+    actions.className = 'maint-actions';
+    const edit = document.createElement('button');
+    edit.className = 'btn btn-secondary';
+    edit.textContent = intervalText(item);
+    edit.addEventListener('click', () => openMaintEditor(item.id));
+    const done = document.createElement('button');
+    done.className = 'btn btn-primary';
+    done.textContent = 'Fatto';
+    done.addEventListener('click', () => {
+      if (!done.dataset.armed) {
+        done.dataset.armed = '1';
+        done.textContent = 'Confermi?';
+        return;
+      }
+      bikeLib.markDone(item, kmNow);
+      saveBikes();
+      toast(`${item.label}: segnata`);
+    });
+    actions.append(edit, done);
+
+    li.append(head, bar, textBlock('maint-last', last), actions);
+    return li;
+  }
+
+  function renderBikeSheet() {
+    const b = findBike(editingBikeId);
+    if (!b) return;
+    const history = store.loadHistory();
+    const s = summarize(bikeLib.ridesOf(b, history, bikeList));
+    const kmNow = bikeLib.bikeKm(b, history, bikeList);
+    const isActive = b.id === activeBike().id;
+    $('bike-title').textContent = b.name;
+    $('btn-bike-use').hidden = isActive || ride.state !== 'idle';
+    $('bike-in-use').hidden = !isActive;
+    $('bike-stats').replaceChildren(
+      statTile(number(kmNow, 0), 'km totali'),
+      statTile(String(s.rides), 'uscite'),
+      statTile(number(s.monthM / 1000, 1), 'km mese'),
+      statTile(km(s.longestM), 'km più lunga'),
+      statTile(kmh(s.bestAvgMs), 'media top'),
+      statTile(kmh(s.topSpeedMs), 'km/h max'),
+    );
+    $('bike-maint').replaceChildren(...bikeLib.visibleItems(b).map((item) => maintRow(b, item, kmNow)));
+    const del = $('btn-bike-delete');
+    del.hidden = bikeList.length < 2;
+    del.dataset.armed = '';
+    del.textContent = 'Elimina bici';
+  }
+
+  function onBikeField(e) {
+    const b = findBike(editingBikeId);
+    const { name, value } = e.target;
+    if (name === 'name') b.name = value.trim() || 'Senza nome';
+    else if (name === 'weightKg') b.weightKg = Number(value) || null;
+    else if (name === 'startKm') bikeLib.setStartKm(b, Math.max(0, Number(value) || 0));
+    else b[name] = value.trim();
+    saveBikes();
+  }
+
+  function deleteBike() {
+    const del = $('btn-bike-delete');
+    const b = findBike(editingBikeId);
+    const others = bikeList.filter((x) => x.id !== b.id);
+    if (!del.dataset.armed) {
+      del.dataset.armed = '1';
+      del.textContent = `Sicuro? Le sue uscite passano a ${others[0].name}`;
+      return;
+    }
+    const first = bikeList[0].id;
+    store.saveHistory(store.loadHistory().map((r) => ((r.bikeId || first) === b.id ? { ...r, bikeId: others[0].id } : r)));
+    bikeList = others;
+    if (prefs.activeBikeId === b.id) {
+      prefs.activeBikeId = others[0].id;
+      store.savePrefs(prefs);
+    }
+    $('bike').close();
+    saveBikes();
+    toast(`${b.name} eliminata`);
+  }
+
+  function openMaintEditor(itemId) {
+    editingItemId = itemId;
+    const item = itemId && findBike(editingBikeId).maintenance.find((i) => i.id === itemId);
+    $('maint-edit-title').textContent = item ? 'Modifica voce' : 'Nuova voce';
+    $('maint-label').value = item?.label ?? '';
+    $('maint-km').value = item?.everyKm ?? '';
+    $('maint-months').value = item?.everyMonths ?? '';
+    $('btn-maint-delete').hidden = !item;
+    $('btn-maint-delete').dataset.armed = '';
+    $('btn-maint-delete').textContent = 'Elimina';
+    $('maint-edit').showModal();
+    if (!item) $('maint-label').focus();
+  }
+
+  function saveMaint() {
+    const b = findBike(editingBikeId);
+    const label = $('maint-label').value.trim();
+    const everyKm = Math.round(Number($('maint-km').value)) || null;
+    const everyMonths = Math.round(Number($('maint-months').value)) || null;
+    if (!label) {
+      toast('Scrivi cosa va fatto');
+      return;
+    }
+    if (!everyKm && !everyMonths) {
+      toast('Indica ogni quanti km o mesi');
+      return;
+    }
+    const item = editingItemId && b.maintenance.find((i) => i.id === editingItemId);
+    if (item) Object.assign(item, { label, everyKm, everyMonths });
+    else bikeLib.addItem(b, { label, everyKm, everyMonths }, bikeLib.bikeKm(b, store.loadHistory(), bikeList));
+    $('maint-edit').close();
+    saveBikes();
+  }
+
+  function deleteMaint() {
+    const btn = $('btn-maint-delete');
+    if (!btn.dataset.armed) {
+      btn.dataset.armed = '1';
+      btn.textContent = 'Sicuro?';
+      return;
+    }
+    const b = findBike(editingBikeId);
+    b.maintenance = b.maintenance.filter((i) => i.id !== editingItemId);
+    $('maint-edit').close();
+    saveBikes();
+  }
+
+  function setupBikes() {
+    $('btn-bike-pick').addEventListener('click', openPicker);
+    $('btn-picker-close').addEventListener('click', () => $('bike-picker').close());
+    $('btn-picker-manage').addEventListener('click', () => {
+      $('bike-picker').close();
+      showView('more');
+      $('bike-list').scrollIntoView({ block: 'center' });
+    });
+    $('btn-bike-add').addEventListener('click', addBike);
+    $('btn-bike-close').addEventListener('click', () => $('bike').close());
+    $('btn-bike-use').addEventListener('click', () => {
+      setActiveBike(editingBikeId);
+      toast(`Bici: ${findBike(editingBikeId).name}`);
+    });
+    $('btn-bike-delete').addEventListener('click', deleteBike);
+    $('bike-form').querySelectorAll('input[name]').forEach((input) => {
+      input.addEventListener(input.name === 'name' ? 'input' : 'change', onBikeField);
+    });
+    $('bike-type').replaceChildren(...BIKE_TYPES.map((t) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = t.label;
+      btn.addEventListener('click', () => {
+        findBike(editingBikeId).type = t.value;
+        paintBikeType();
+        saveBikes();
+      });
+      return btn;
+    }));
+    $('bike-electric').addEventListener('click', () => {
+      const b = findBike(editingBikeId);
+      b.electric = !b.electric;
+      $('bike-electric').setAttribute('aria-pressed', b.electric);
+      saveBikes();
+    });
+    $('btn-maint-add').addEventListener('click', () => openMaintEditor(null));
+    $('btn-maint-close').addEventListener('click', () => $('maint-edit').close());
+    $('btn-maint-save').addEventListener('click', saveMaint);
+    $('btn-maint-delete').addEventListener('click', deleteMaint);
+    $('detail-bike').addEventListener('change', (e) => {
+      store.setRideBike(detailRide.startedAt, e.target.value);
+      detailRide.bikeId = e.target.value;
+      renderHistory();
+      renderBikes();
     });
   }
 
@@ -979,7 +1321,7 @@ ${segments}
       updateMapPosition(!riderMarker);
     }
     if (name === 'history') renderHistory();
-    if (name === 'more') renderService();
+    if (name === 'more') renderBikeList();
   }
 
   // ---------- Avvio ----------
@@ -1047,8 +1389,11 @@ ${segments}
     });
   }
 
+  if (!findBike(prefs.activeBikeId)) prefs.activeBikeId = bikeList[0].id;
   buildGauge();
   applySpeedStyle();
+  setupBikes();
+  renderBikePick();
   bindEvents();
   setupMic();
   setupLock();

@@ -33,6 +33,8 @@
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M12 21V4M5 11l7-7 7 7"/></symbol>
     <symbol id="i-roundabout" viewBox="0 0 24 24"><path d="M12 22v-6"/><circle cx="12" cy="10" r="5.500"/><path d="M17.500 10H22M19.500 7.500 22 10l-2.500 2.500"/></symbol>
     <symbol id="i-destination" viewBox="0 0 24 24"><path d="M6 22V3M6 4h12l-3 4 3 4H6"/></symbol>
+    <symbol id="i-bike" viewBox="0 0 24 24"><circle cx="5.500" cy="16.500" r="3.500"/><circle cx="18.500" cy="16.500" r="3.500"/><path d="M5.500 16.500 9.500 9h6l3 7.500M9.500 9 12 16.500h-1M8 6h3M14 6h2l1.500 3"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
   </svg>
 
   <div id="app">
@@ -67,6 +69,13 @@
             <button class="icon-btn" id="btn-sun" aria-label="Schermo ad alto contrasto per il sole"><svg><use href="#i-sun"/></svg></button>
           </div>
         </div>
+
+        <button class="bike-pick" id="btn-bike-pick">
+          <svg><use href="#i-bike"/></svg>
+          <span class="bike-pick-name" id="bike-pick-name">La mia bici</span>
+          <span class="bike-pick-due" id="bike-pick-due" hidden>manutenzione</span>
+          <svg class="chev"><use href="#i-chevron"/></svg>
+        </button>
 
         <div class="speed" id="speed-box" role="button" tabindex="0" aria-label="Tocca per cambiare tachimetro">
           <div class="speed-value" id="speed">0</div>
@@ -120,6 +129,7 @@
       </section>
 
       <section id="view-history" class="view scroll" hidden>
+        <div class="segmented bike-filter" id="history-filter" hidden></div>
         <div class="totals">
           <div class="stat"><div class="stat-value" id="week-km">0</div><div class="stat-label">km settimana</div></div>
           <div class="stat"><div class="stat-value" id="month-km">0</div><div class="stat-label">km mese</div></div>
@@ -154,9 +164,10 @@
         <h2>Aspetto</h2>
         <div class="setting"><div class="setting-label">Colore</div><div class="segmented" id="set-accent"></div></div>
 
-        <h2>Bici e percorsi</h2>
-        <div class="setting"><div class="setting-label">Tipo di bici</div><div class="segmented" id="set-bike"></div></div>
-        <p class="hint">Il navigatore sceglie sempre il percorso più breve, anche per stradine e vicoli.</p>
+        <h2>Le tue bici</h2>
+        <ul class="history" id="bike-list"></ul>
+        <button class="btn btn-secondary wide add-btn" id="btn-bike-add">Aggiungi bici</button>
+        <p class="hint">Il navigatore sceglie sempre il percorso più breve, anche per stradine e vicoli, adatto al tipo della bici in uso.</p>
 
         <h2>WeCity</h2>
         <button class="toggle" id="set-wecity"><span>Mostra il pulsante Apri WeCity</span><span class="switch"></span></button>
@@ -173,17 +184,6 @@
           <div class="setting-label">Obiettivo km a settimana</div>
           <div class="stepper" id="set-goal"><button aria-label="Meno">−</button><span class="stepper-value"></span><button aria-label="Più">+</button></div>
         </div>
-
-        <h2>Manutenzione bici</h2>
-        <div class="setting">
-          <div class="goal-text" id="service-text"></div>
-          <div class="bar"><div class="bar-fill" id="service-fill"></div></div>
-        </div>
-        <div class="setting stepper-row">
-          <div class="setting-label">Avvisami ogni (km)</div>
-          <div class="stepper" id="set-service"><button aria-label="Meno">−</button><span class="stepper-value"></span><button aria-label="Più">+</button></div>
-        </div>
-        <button class="btn btn-secondary wide" id="btn-service-done">Manutenzione fatta</button>
 
         <h2>Strumenti</h2>
         <div class="tools">
@@ -225,9 +225,75 @@
     </div>
     <div id="detail-map"></div>
     <div class="stats detail-stats" id="detail-stats"></div>
+    <label class="field field-inline" id="detail-bike-row">
+      <span>Bici</span>
+      <select id="detail-bike"></select>
+    </label>
     <div class="detail-actions">
       <button class="btn btn-secondary" id="btn-gpx">Scarica GPX</button>
       <button class="btn btn-stop" id="btn-delete">Elimina</button>
+    </div>
+  </dialog>
+
+  <dialog id="bike-picker" class="sheet">
+    <div class="sheet-head">
+      <h2>Con che bici esci?</h2>
+      <button class="icon-btn" id="btn-picker-close" aria-label="Chiudi"><svg><use href="#i-close"/></svg></button>
+    </div>
+    <ul class="history" id="picker-list"></ul>
+    <button class="btn btn-secondary wide" id="btn-picker-manage">Gestisci le bici</button>
+  </dialog>
+
+  <dialog id="bike" class="sheet">
+    <div class="sheet-head">
+      <h2 id="bike-title"></h2>
+      <button class="icon-btn" id="btn-bike-close" aria-label="Chiudi"><svg><use href="#i-close"/></svg></button>
+    </div>
+    <button class="btn btn-primary wide" id="btn-bike-use">Usa questa bici</button>
+    <p class="in-use" id="bike-in-use">Bici in uso</p>
+    <div class="stats detail-stats" id="bike-stats"></div>
+
+    <h3>Manutenzione</h3>
+    <ul class="maint" id="bike-maint"></ul>
+    <button class="btn btn-secondary wide add-btn" id="btn-maint-add">Aggiungi voce</button>
+
+    <h3>Dati della bici</h3>
+    <div class="form" id="bike-form">
+      <label class="field"><span>Nome</span><input name="name" type="text" maxlength="40" autocomplete="off"></label>
+      <div class="field"><span>Tipo</span><div class="segmented" id="bike-type"></div></div>
+      <button class="toggle" id="bike-electric" type="button"><span>Bici elettrica</span><span class="switch"></span></button>
+      <div class="field-row">
+        <label class="field"><span>Marca</span><input name="brand" type="text" maxlength="40" autocomplete="off"></label>
+        <label class="field"><span>Modello</span><input name="model" type="text" maxlength="40" autocomplete="off"></label>
+      </div>
+      <div class="field-row">
+        <label class="field"><span>Taglia</span><input name="size" type="text" maxlength="12" autocomplete="off"></label>
+        <label class="field"><span>Peso (kg)</span><input name="weightKg" type="number" inputmode="decimal" min="0" max="60" step="0.1"></label>
+      </div>
+      <div class="field-row">
+        <label class="field"><span>Acquistata il</span><input name="purchasedOn" type="date"></label>
+        <label class="field"><span>Km prima di ContaKM</span><input name="startKm" type="number" inputmode="numeric" min="0" step="1"></label>
+      </div>
+    </div>
+    <button class="btn btn-stop wide" id="btn-bike-delete">Elimina bici</button>
+  </dialog>
+
+  <dialog id="maint-edit" class="sheet sheet-small">
+    <div class="sheet-head">
+      <h2 id="maint-edit-title">Voce di manutenzione</h2>
+      <button class="icon-btn" id="btn-maint-close" aria-label="Chiudi"><svg><use href="#i-close"/></svg></button>
+    </div>
+    <div class="form">
+      <label class="field"><span>Cosa</span><input id="maint-label" type="text" maxlength="40" autocomplete="off" placeholder="Es. regolazione cambio"></label>
+      <div class="field-row">
+        <label class="field"><span>Ogni (km)</span><input id="maint-km" type="number" inputmode="numeric" min="0" step="50" placeholder="—"></label>
+        <label class="field"><span>Oppure ogni (mesi)</span><input id="maint-months" type="number" inputmode="numeric" min="0" step="1" placeholder="—"></label>
+      </div>
+      <p class="hint">Con km e mesi insieme vale la scadenza che arriva prima.</p>
+    </div>
+    <div class="detail-actions">
+      <button class="btn btn-stop" id="btn-maint-delete">Elimina</button>
+      <button class="btn btn-primary" id="btn-maint-save">Salva</button>
     </div>
   </dialog>
 
@@ -239,6 +305,7 @@
   <script src="vendor/capacitor/capacitor.js"></script>
   <script src="js/native.js"></script>
   <script src="js/geo.js"></script>
+  <script src="js/bikes.js"></script>
   <script src="js/stats.js"></script>
   <script src="js/ride.js"></script>
   <script src="js/nav.js"></script>
