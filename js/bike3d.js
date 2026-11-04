@@ -126,21 +126,29 @@
 
   /** Battistrada: righe oblique sottili lungo la gomma, usate come rilievo. */
   function treadTexture() {
+    // In verticale il profilo della gomma (fianco, battistrada, fianco); in orizzontale il giro della ruota.
     const c = document.createElement('canvas');
     c.width = 64;
-    c.height = 32;
+    c.height = 64;
     const x = c.getContext('2d');
     x.fillStyle = '#808080';
-    x.fillRect(0, 0, 64, 32);
+    x.fillRect(0, 0, 64, 64);
+    // Battistrada a spina di pesce al centro, con la riga di rotolamento liscia
     x.strokeStyle = '#3a3a3a';
     x.lineWidth = 3;
     for (let i = -32; i < 96; i += 10) {
       x.beginPath();
-      x.moveTo(i, 4);
-      x.lineTo(i + 8, 16);
-      x.lineTo(i, 28);
+      x.moveTo(i, 22);
+      x.lineTo(i + 8, 30);
+      x.moveTo(i + 8, 34);
+      x.lineTo(i, 42);
       x.stroke();
     }
+    x.fillStyle = '#9a9a9a';
+    x.fillRect(0, 31, 64, 2);
+    // Righe dello stampo sui fianchi e bordo del tallone
+    x.fillStyle = '#5a5a5a';
+    for (const y of [12, 51]) x.fillRect(0, y, 64, 1.5);
     const t = new THREE.CanvasTexture(c);
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.repeat.set(90, 1);
@@ -247,6 +255,9 @@
       tail: glow(0xff3b3b, 0.9),
       screen: glow(0x38bdf8, 0.7),
       led: glow(0x34d399, 1),
+      pedal: std(0x2c3138, 0.75, 0.35),
+      rd: std(0x3b4048, 0.75, 0.28),
+      rdSilver: std(0xd9dee4, 1, 0.18),
       phone: new THREE.MeshBasicMaterial({ map: phoneTexture(), toneMapped: false }),
       mirror: std(0xdfe8f2, 1, 0.04),
     };
@@ -254,10 +265,79 @@
 
   // ---------- Pezzi ----------
 
+  /**
+   * Gomma vera: sezione quasi ovale, battistrada un po' piatto e fianchi dritti (superellisse),
+   * aperta verso il cerchio come un copertone. a = altezza, b = mezza larghezza.
+   */
+  function tireGeometry(R, a, b, from = -0.84, to = 0.84, offset = 0) {
+    const pts = [];
+    const n = 2.6;
+    const steps = 28;
+    for (let i = 0; i <= steps; i++) {
+      const phi = (from + ((to - from) * i) / steps) * Math.PI;
+      const c = Math.cos(phi);
+      const s = Math.sin(phi);
+      const rr = R + (a + offset) * Math.sign(c) * Math.abs(c) ** (2 / n);
+      const ax = (b + offset) * Math.sign(s) * Math.abs(s) ** (2 / n);
+      pts.push(new THREE.Vector2(rr, ax));
+    }
+    const geo = new THREE.LatheGeometry(pts, 96);
+    geo.rotateX(Math.PI / 2);
+    return geo;
+  }
+
+  const sidewallCache = new Map();
+  /** Scritte in rilievo sul fianco della gomma (marca, misura, pressione), disegnate lungo il cerchio. */
+  function sidewallTexture(label, ratio) {
+    const key = `${label}|${ratio.toFixed(3)}`;
+    if (sidewallCache.has(key)) return sidewallCache.get(key);
+    const size = 1024;
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const x = c.getContext('2d');
+    const radius = (size / 2) * ratio;
+    x.fillStyle = 'rgba(214, 220, 228, 0.62)';
+    x.font = '800 30px Inter, Arial, sans-serif';
+    x.textAlign = 'center';
+    x.textBaseline = 'middle';
+    for (const start of [0, Math.PI]) {
+      let a = start;
+      for (const ch of label) {
+        const w = x.measureText(ch).width;
+        a += w / 2 / radius;
+        x.save();
+        x.translate(size / 2 + Math.cos(a) * radius, size / 2 + Math.sin(a) * radius);
+        x.rotate(a + Math.PI / 2);
+        x.fillText(ch, 0, 0);
+        x.restore();
+        a += w / 2 / radius + 0.004;
+      }
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    sidewallCache.set(key, t);
+    return t;
+  }
+
   function wheel(S, R, mat, parts, side) {
     const g = new THREE.Group();
-    const tire = new THREE.Mesh(new THREE.TorusGeometry(R, S.tire, 14, 72), mat.tire);
-    tire.scale.z = S.tire > 0.06 ? 1.15 : 1;
+    const tireB = S.tire * (S.tire > 0.06 ? 1.12 : 0.95);
+    const tire = new THREE.Mesh(tireGeometry(R, S.tire, tireB), mat.tire);
+    // Scritte sui due fianchi
+    {
+      const kind = S.knobby ? (S.tire > 0.06 ? 'FAT TRAIL' : 'TRAIL PRO') : S.tire < 0.022 ? 'RACE LIGHT' : 'CITY TOUR';
+      const label = `CONTAKM ${kind}  •  ${Math.round(S.tire * 2000 * 0.95)}-${R < 0.3 ? 406 : 622}  •  MAX ${S.tire < 0.022 ? 8 : S.tire > 0.06 ? 2 : 5} BAR  •  E-BIKE READY`;
+      const inner = R - S.tire * 0.42;
+      const outer = R + S.tire * 0.42;
+      const tex = sidewallTexture(label, R / outer);
+      const ringMat = new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.8, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+      for (const sgn of [1, -1]) {
+        const ringMesh = new THREE.Mesh(new THREE.RingGeometry(inner, outer, 96, 1), ringMat);
+        ringMesh.position.z = sgn * (tireB + 0.0008);
+        if (sgn < 0) ringMesh.rotation.y = Math.PI;
+        g.add(ringMesh);
+      }
+    }
     const rim = new THREE.Mesh(new THREE.TorusGeometry(R - S.tire - 0.008, S.tire > 0.06 ? 0.03 : 0.011, 8, 64), mat.metal);
     const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, S.forkZ * 2.2, 16), mat.metal);
     hub.rotation.x = Math.PI / 2;
@@ -277,7 +357,9 @@
     }
     if (S.tanwall) {
       // Fianco color cuoio, tipico delle gomme da città e gravel
-      const wall = new THREE.Mesh(new THREE.TorusGeometry(R - S.tire * 0.55, S.tire * 0.5, 10, 72), mat.tan);
+      // Fascia color cuoio sulla parte bassa dei fianchi, appena sopra la gomma nera
+      const wall = new THREE.Group();
+      for (const [f, t] of [[-0.84, -0.6], [0.6, 0.84]]) wall.add(new THREE.Mesh(tireGeometry(R, S.tire, tireB, f, t, 0.0006), mat.tan));
       g.add(wall);
       parts.tyres.push(wall);
     }
@@ -350,19 +432,120 @@
       }
     }
     if (side === 'rear') {
+      // Pacco pignoni: dischi dentati, il più grande verso i raggi e il più piccolo verso l'esterno
+      const toothList = [];
       for (let i = 0; i < 10; i++) {
-        // Pacco pignoni: il più grande verso i raggi, il più piccolo verso l'esterno (come sulle bici vere)
-        const cog = new THREE.Mesh(new THREE.TorusGeometry(0.03 + (9 - i) * 0.008, 0.005, 6, 28), mat.chain);
-        cog.position.z = 0.045 + i * 0.006;
+        const r = 0.03 + (9 - i) * 0.008;
+        const z = 0.045 + i * 0.006;
+        const cog = new THREE.Mesh(new THREE.CylinderGeometry(r - 0.002, r - 0.002, 0.0022, 40), mat.chain);
+        cog.rotation.x = Math.PI / 2;
+        cog.position.z = z;
         g.add(cog);
         parts.gears.push(cog);
+        const n = Math.round((Math.PI * 2 * r) / 0.0127);
+        for (let k = 0; k < n; k++) toothList.push([r, (k / n) * Math.PI * 2 + i * 0.13, z]);
+        if (i < 9) {
+          const spacer = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.0038, 16), mat.dark);
+          spacer.rotation.x = Math.PI / 2;
+          spacer.position.z = z + 0.003;
+          g.add(spacer);
+        }
       }
+      const cogTeeth = new THREE.InstancedMesh(new THREE.BoxGeometry(0.0045, 0.0055, 0.0022), mat.chain, toothList.length);
+      const tm = new THREE.Matrix4();
+      const tq = new THREE.Quaternion();
+      const tOne = new THREE.Vector3(1, 1, 1);
+      toothList.forEach(([r, a, z], k) => {
+        tq.setFromAxisAngle(new THREE.Vector3(0, 0, 1), a - Math.PI / 2);
+        cogTeeth.setMatrixAt(k, tm.compose(new THREE.Vector3(Math.cos(a) * (r + 0.002), Math.sin(a) * (r + 0.002), z), tq, tOne));
+      });
+      g.add(cogTeeth);
+      parts.gears.push(cogTeeth);
+      // Ghiera di chiusura con le scanalature, sul pignone più piccolo
+      const lockring = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.004, 12), mat.metal);
+      lockring.rotation.x = Math.PI / 2;
+      lockring.position.z = 0.045 + 9 * 0.006 + 0.003;
+      g.add(lockring);
       if (S.motor === 'hub') {
         const motor = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.07, 32), mat.motor);
         motor.rotation.x = Math.PI / 2;
         g.add(motor);
         parts.battery.push(motor);
       }
+    }
+    return g;
+  }
+
+  /**
+   * Pedale con l'origine sul perno della pedivella, verso l'esterno (sgn = ±1 sull'asse z).
+   * block: da città, due blocchetti di gomma tra due guance; flat: piattaforma da MTB con i pin;
+   * clip: a sgancio rapido da corsa.
+   */
+  function pedal(kind, mat, sgn, reflectors) {
+    const g = new THREE.Group();
+    const zc = sgn * 0.058;
+    g.add(tube([0, 0, 0], [0, 0, sgn * 0.1], 0.0045, mat.metal, 8));
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.085, 12), mat.dark);
+    body.rotation.x = Math.PI / 2;
+    body.position.z = zc;
+    g.add(body);
+    if (kind === 'block') {
+      for (const dz of [-0.04, 0.04]) g.add(box(0.09, 0.03, 0.004, mat.metal, [0, 0, zc + dz]));
+      for (const dx of [-0.028, 0.028]) {
+        g.add(box(0.026, 0.024, 0.076, mat.rubber, [dx, 0, zc]));
+        // Righe antiscivolo sulla gomma
+        for (const dy of [-0.0122, 0.0122]) {
+          for (const gx of [-0.008, 0, 0.008]) g.add(box(0.0025, 0.0012, 0.07, mat.dark, [dx + gx, dy, zc]));
+        }
+      }
+      if (reflectors) for (const dx of [-0.0415, 0.0415]) g.add(box(0.002, 0.016, 0.05, mat.reflector, [dx, 0, zc]));
+    } else if (kind === 'flat') {
+      const plat = new THREE.Shape();
+      plat.moveTo(-0.05, -0.044);
+      plat.quadraticCurveTo(0, -0.036, 0.05, -0.044);
+      plat.lineTo(0.05, 0.044);
+      plat.quadraticCurveTo(0, 0.036, -0.05, 0.044);
+      plat.closePath();
+      const hole = new THREE.Path();
+      hole.moveTo(-0.034, -0.026);
+      hole.lineTo(0.034, -0.026);
+      hole.lineTo(0.034, 0.026);
+      hole.lineTo(-0.034, 0.026);
+      hole.closePath();
+      plat.holes.push(hole);
+      const geo = new THREE.ExtrudeGeometry(plat, { depth: 0.014, bevelEnabled: true, bevelThickness: 0.002, bevelSize: 0.002, bevelSegments: 2 });
+      geo.translate(0, 0, -0.007);
+      const frame = new THREE.Mesh(geo, mat.pedal);
+      frame.rotation.x = Math.PI / 2;
+      frame.position.z = zc;
+      g.add(frame);
+      // Pin d'acciaio sopra e sotto per la presa delle scarpe
+      const pin = new THREE.CylinderGeometry(0.0016, 0.0016, 0.006, 6);
+      for (const px of [-0.044, -0.022, 0, 0.022, 0.044]) {
+        for (const pz of [-0.04, 0.04]) {
+          for (const py of [0.009, -0.009]) {
+            const p = new THREE.Mesh(pin, mat.metal);
+            p.position.set(px, py, zc + pz * (Math.abs(px) > 0.03 ? 0.75 : 1));
+            g.add(p);
+          }
+        }
+      }
+    } else {
+      // Corpo a goccia con la piastrina d'acciaio dove si aggancia la tacchetta
+      const drop = new THREE.Shape();
+      drop.moveTo(-0.045, 0);
+      drop.quadraticCurveTo(-0.04, 0.034, 0, 0.036);
+      drop.quadraticCurveTo(0.05, 0.032, 0.05, 0);
+      drop.quadraticCurveTo(0.05, -0.032, 0, -0.036);
+      drop.quadraticCurveTo(-0.04, -0.034, -0.045, 0);
+      const geo = new THREE.ExtrudeGeometry(drop, { depth: 0.012, bevelEnabled: true, bevelThickness: 0.003, bevelSize: 0.003, bevelSegments: 3 });
+      geo.translate(0, 0, -0.006);
+      const shell = new THREE.Mesh(geo, mat.dark);
+      shell.rotation.x = Math.PI / 2;
+      shell.position.z = zc;
+      g.add(shell);
+      g.add(box(0.05, 0.003, 0.05, mat.metal, [0.008, 0.0095, zc]));
+      g.add(box(0.012, 0.004, 0.03, mat.tail, [-0.042, 0.004, zc]));
     }
     return g;
   }
@@ -631,11 +814,30 @@
 
     // ---- Trasmissione e motore ----
     const crank = new THREE.Group();
+    const pedals = [];
     crank.position.copy(bb);
     const ringRadius = S.motor === 'mid' ? 0.085 : 0.1;
     const ringZ = 0.06 + (S.motor === 'mid' ? 0.02 : 0);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(ringRadius, 0.008, 8, 48), mat.chain);
-    ring.position.z = ringZ;
+    // Corona piatta con quattro finestre di alleggerimento, come quelle vere
+    const ringShape = new THREE.Shape();
+    ringShape.absarc(0, 0, ringRadius + 0.003, 0, Math.PI * 2, false);
+    for (let i = 0; i < 4; i++) {
+      const a0 = (i / 4) * Math.PI * 2 + Math.PI / 4 + 0.32;
+      const hole = new THREE.Path();
+      hole.absarc(0, 0, ringRadius - 0.012, a0, a0 + Math.PI / 2 - 0.64, false);
+      hole.absarc(0, 0, ringRadius * 0.45, a0 + Math.PI / 2 - 0.64, a0, true);
+      hole.closePath();
+      ringShape.holes.push(hole);
+    }
+    const ring = new THREE.Mesh(new THREE.ExtrudeGeometry(ringShape, { depth: 0.003, bevelEnabled: true, bevelThickness: 0.0006, bevelSize: 0.0006, bevelSegments: 1, curveSegments: 32 }), mat.chain);
+    ring.position.z = ringZ - 0.0015;
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+      const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.0045, 0.0045, 0.006, 8), mat.metal);
+      bolt.rotation.x = Math.PI / 2;
+      bolt.position.set(Math.cos(a) * ringRadius * 0.82, Math.sin(a) * ringRadius * 0.82, ringZ + 0.002);
+      crank.add(bolt);
+    }
     crank.add(ring);
     parts.chain.push(ring);
     // Denti della corona e "ragno" a quattro bracci
@@ -657,15 +859,16 @@
       const zz = z + Math.sign(z) * (S.motor === 'mid' ? 0.02 : 0);
       const tip = [Math.cos(a) * 0.17, Math.sin(a) * 0.17, zz];
       crank.add(tube([0, 0, zz], tip, 0.011, mat.metal, 10));
-      // Pedale a piattaforma: corpo, perno e due guance
-      const pz = zz + Math.sign(z) * 0.05;
-      crank.add(tube(tip, [tip[0], tip[1], pz + Math.sign(z) * 0.04], 0.005, mat.metal, 6));
-      crank.add(box(0.1, 0.012, 0.08, mat.rubber, [tip[0], tip[1], pz]));
-      crank.add(box(0.1, 0.022, 0.006, mat.dark, [tip[0], tip[1], pz - 0.04]), box(0.1, 0.022, 0.006, mat.dark, [tip[0], tip[1], pz + 0.04]));
-      if (S.comfort || S.reflectors) {
-        // Catarifrangenti arancioni davanti e dietro al pedale
-        for (const dx of [-0.051, 0.051]) crank.add(box(0.004, 0.014, 0.05, mat.reflector, [tip[0] + dx, tip[1], pz]));
-      }
+      // Pedale: gira sul suo perno e resta orizzontale mentre la pedivella ruota
+      const pedalGroup = pedal(S.bar === 'drop' ? 'clip' : S.knobby ? 'flat' : 'block', mat, Math.sign(z), S.comfort || S.reflectors);
+      pedalGroup.position.set(tip[0], tip[1], zz);
+      crank.add(pedalGroup);
+      pedals.push(pedalGroup);
+      // Bullone di chiusura della pedivella
+      const capBolt = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.006, 16), mat.dark);
+      capBolt.rotation.x = Math.PI / 2;
+      capBolt.position.set(0, 0, zz + Math.sign(z) * 0.012);
+      crank.add(capBolt);
     }
     bike.add(crank);
     const ringR = S.motor === 'mid' ? 0.085 : 0.1;
@@ -684,27 +887,60 @@
     const knuckleP = v3([upper.x - 0.012, upper.y + 0.016], cogZ + 0.03);
     // Forcellino avvitato al telaio
     derailleur.add(box(0.03, 0.03, 0.006, mat.frame, [rear.x - 0.004, rear.y - 0.018, cogZ + 0.022], -0.5));
-    for (const k of [knuckleB, knuckleP]) {
-      const knuckle = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.022, 14), mat.dark);
-      knuckle.rotation.x = Math.PI / 2;
-      knuckle.position.copy(k);
-      derailleur.add(knuckle);
+    // Corpo superiore (snodo B) avvitato al forcellino, con la vite di registro della tensione
+    const bBody = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.016, 0.03, 20), mat.rd);
+    bBody.rotation.x = Math.PI / 2;
+    bBody.position.copy(knuckleB);
+    const bCap = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.004, 16), mat.rdSilver);
+    bCap.rotation.x = Math.PI / 2;
+    bCap.position.copy(knuckleB).add(new THREE.Vector3(0, 0, 0.017));
+    derailleur.add(bBody, bCap);
+    derailleur.add(tube(knuckleB.clone().add(new THREE.Vector3(-0.012, 0.012, 0)), knuckleB.clone().add(new THREE.Vector3(-0.022, 0.02, 0)), 0.0025, mat.rdSilver, 6));
+    // Parallelogramma: piastra esterna larga e sagomata (grigio scuro con la fascia lucida) e biella interna
+    const pl = knuckleP.clone().sub(knuckleB);
+    const plLen = pl.length();
+    const plAng = Math.atan2(pl.y, pl.x);
+    const mid = knuckleB.clone().lerp(knuckleP, 0.5);
+    const plShape = new THREE.Shape();
+    plShape.moveTo(-plLen / 2, -0.011);
+    plShape.quadraticCurveTo(0, -0.02, plLen / 2, -0.012);
+    plShape.quadraticCurveTo(plLen / 2 + 0.01, 0, plLen / 2, 0.012);
+    plShape.quadraticCurveTo(0, 0.016, -plLen / 2, 0.011);
+    plShape.quadraticCurveTo(-plLen / 2 - 0.01, 0, -plLen / 2, -0.011);
+    const plGeo = new THREE.ExtrudeGeometry(plShape, { depth: 0.006, bevelEnabled: true, bevelThickness: 0.0015, bevelSize: 0.0015, bevelSegments: 2, curveSegments: 10 });
+    const outerPlate = new THREE.Mesh(plGeo, mat.rd);
+    outerPlate.position.set(mid.x, mid.y, cogZ + 0.034);
+    outerPlate.rotation.z = plAng;
+    const stripe = box(plLen * 0.8, 0.004, 0.0015, mat.rdSilver, [0, 0.004, 0.0075]);
+    outerPlate.add(stripe);
+    derailleur.add(outerPlate);
+    derailleur.add(tube(knuckleB.clone().add(new THREE.Vector3(0, -0.006, -0.008)), knuckleP.clone().add(new THREE.Vector3(0, -0.006, -0.008)), 0.004, mat.rd, 8));
+    // Viti di fine corsa H e L sul retro
+    for (const dy of [-0.004, 0.004]) {
+      const screw = tube(knuckleB.clone().add(new THREE.Vector3(-0.012, dy - 0.012, 0.004)), knuckleB.clone().add(new THREE.Vector3(-0.02, dy - 0.014, 0.004)), 0.0018, mat.rdSilver, 6);
+      derailleur.add(screw);
     }
-    // Parallelogramma: due bracci tra i due snodi
-    for (const dz of [-0.006, 0.006]) {
-      derailleur.add(tube(knuckleB.clone().add(new THREE.Vector3(0, 0, dz)), knuckleP.clone().add(new THREE.Vector3(0, 0, dz)), 0.006, dz < 0 ? mat.dark : mat.metal, 8));
-    }
-    derailleur.add(tube(knuckleP, v3([upper.x, upper.y], cogZ + 0.012), 0.005, mat.metal, 8));
+    // Snodo P e braccio verso la gabbia
+    const pBody = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.026, 18), mat.rd);
+    pBody.rotation.x = Math.PI / 2;
+    pBody.position.copy(knuckleP);
+    derailleur.add(pBody);
+    derailleur.add(tube(knuckleP, v3([upper.x, upper.y], cogZ + 0.012), 0.005, mat.rdSilver, 8));
+    // Registro del cavo (barilotto) e morsetto del filo
+    const barrelBase = knuckleB.clone().add(new THREE.Vector3(-0.012, 0.012, 0.012));
+    const barrelTop = barrelBase.clone().add(new THREE.Vector3(-0.016, 0.008, 0.002));
+    derailleur.add(tube(barrelBase, barrelTop, 0.0045, mat.rdSilver, 10));
+    derailleur.add(box(0.01, 0.006, 0.006, mat.rdSilver, [mid.x, mid.y + 0.004, cogZ + 0.044]));
     // Gabbia: due piastre sagomate attorno alle rotelline
     const d = lower.clone().sub(upper);
     const ang = Math.atan2(d.y, d.x);
     const cage = new THREE.Shape();
-    const cr = 0.023;
+    const cr = 0.0155;
     cage.absarc(upper.x, upper.y, cr, ang + Math.PI / 2, ang + (3 * Math.PI) / 2, false);
     cage.absarc(lower.x, lower.y, cr * 1.05, ang - Math.PI / 2, ang + Math.PI / 2, false);
     cage.closePath();
     const cageGeo = new THREE.ExtrudeGeometry(cage, { depth: 0.0025, bevelEnabled: true, bevelThickness: 0.0008, bevelSize: 0.0008, bevelSegments: 1, curveSegments: 14 });
-    for (const [z, m] of [[cogZ + 0.011, mat.dark], [cogZ - 0.0135, mat.metal]]) {
+    for (const [z, m] of [[cogZ + 0.011, mat.rd], [cogZ - 0.0135, mat.rdSilver]]) {
       const plate = new THREE.Mesh(cageGeo, m);
       plate.position.z = z;
       derailleur.add(plate);
@@ -785,7 +1021,8 @@
     moveChain(0);
     bike.add(chainMesh);
     parts.chain.push(chainMesh);
-    const derailleurCable = knuckleB.clone().add(new THREE.Vector3(0.01, 0.01, 0.005));
+    // Il filo arriva dal fodero con la classica curva della guaina dietro il mozzo ed entra nel barilotto
+    const derailleurCable = knuckleB.clone().add(new THREE.Vector3(-0.03, 0.021, 0.014));
     if (S.double) {
       // Doppia corona e cambio anteriore sul piantone
       const small = new THREE.Mesh(new THREE.TorusGeometry(0.074, 0.007, 8, 40), mat.chain);
@@ -853,8 +1090,8 @@
       // il movimento centrale (~18°) fino a poco sotto il mozzo dietro (~195°), con il catarifrangente.
       const width = Math.max(0.05, S.tire * 2 + 0.03);
       const deg = Math.PI / 180;
-      const list = [{ c: front, R: S.R, from: 56 * deg, to: 158 * deg, stays: [56 * deg] }];
-      if (!S.longtail) list.push({ c: rear, R: rearR, from: 18 * deg, to: 195 * deg, stays: [120 * deg, 188 * deg], reflector: true });
+      const list = [{ c: front, R: S.R, from: 56 * deg, to: 158 * deg, stays: [56 * deg], flap: true, bridge: 98 * deg }];
+      if (!S.longtail) list.push({ c: rear, R: rearR, from: 18 * deg, to: 195 * deg, stays: [120 * deg, 188 * deg], reflector: true, flap: S.comfort, bridge: 62 * deg });
       for (const f of list) {
         const fr = f.R + S.tire + 0.024;
         const shell = new THREE.Mesh(fenderGeometry(fr, f.from, f.to, width), mat.frame);
@@ -866,6 +1103,17 @@
             bike.add(tube(v3([f.c.x + Math.cos(a) * fr, f.c.y + Math.sin(a) * fr], z * 0.85), v3([f.c.x, f.c.y], z), 0.0035, mat.metal, 5));
           }
         }
+        if (f.flap) {
+          // Paraspruzzi di gomma che continua il parafango verso il basso
+          const a = f.to;
+          const tan = new THREE.Vector3(-Math.sin(a), Math.cos(a), 0);
+          const startP = new THREE.Vector3(f.c.x + Math.cos(a) * (fr - 0.006), f.c.y + Math.sin(a) * (fr - 0.006), 0);
+          const flap = box(0.075, 0.003, width * 0.8, mat.rubber, [0, 0, 0], Math.atan2(tan.y, tan.x));
+          flap.position.copy(startP).addScaledVector(tan, 0.036);
+          bike.add(flap);
+        }
+        // Ponticello che fissa il parafango sotto la testa della forcella / al ponte dei foderi
+        if (f.bridge) bike.add(box(0.03, 0.01, width * 0.6, mat.dark, [f.c.x + Math.cos(f.bridge) * (fr + 0.006), f.c.y + Math.sin(f.bridge) * (fr + 0.006), 0], f.bridge - Math.PI / 2));
         if (f.reflector) {
           const a = f.to - 12 * deg;
           const refl = box(0.012, 0.045, 0.03, mat.tail, [f.c.x + Math.cos(a) * (fr + 0.006), f.c.y + Math.sin(a) * (fr + 0.006), 0], a);
@@ -977,7 +1225,7 @@
     const shiftFrom = leverAt(1).clone().add(new THREE.Vector3(0, -0.02, -0.03));
     const downMid = S.top === 'low' || S.top === 'fold' ? v3([0.15, 0.4], 0.035) : bb.clone().lerp(headLow, 0.5).add(new THREE.Vector3(0, -T * 1.4, 0.03));
     bike.add(curve([shiftFrom, [head.x + 0.14, stemTop.y - 0.02, 0.06], [headLow.x + 0.02, headLow.y - 0.03, 0.035], downMid,
-      [bb.x + 0.02, bb.y - 0.05, 0.035], [bb.x - 0.12, bb.y + 0.0, 0.055], [rear.x + 0.12, rear.y + 0.015, 0.06], [rear.x + 0.02, rear.y - 0.01, cogZ + 0.035], derailleurCable], 0.0032, mat.cable, 90));
+      [bb.x + 0.02, bb.y - 0.05, 0.035], [bb.x - 0.12, bb.y + 0.0, 0.055], [rear.x + 0.12, rear.y + 0.015, 0.06], [rear.x + 0.045, rear.y + 0.02, cogZ + 0.045], [rear.x - 0.03, rear.y + 0.04, cogZ + 0.048], [rear.x - 0.065, rear.y + 0.012, cogZ + 0.035], derailleurCable], 0.0032, mat.cable, 90));
     if (S.double) {
       const fd = bb.clone().lerp(seat, 0.27);
       bike.add(curve([leverAt(-1).clone().add(new THREE.Vector3(0, -0.02, 0.03)), [head.x + 0.14, stemTop.y - 0.02, -0.06], [headLow.x + 0.02, headLow.y - 0.03, -0.03],
@@ -1028,7 +1276,7 @@
       const key = box(0.012, 0.02, 0.006, mat.metal, [at.x + 0.02, at.y + 0.01, Z * 1.1 + 0.006]);
       bike.add(lock, key);
     }
-    if (S.reflectors || S.comfort) {
+    if (S.comfort && !S.reflectors) {
       // Catarifrangenti arancioni sui raggi: girano con le ruote
       for (const w of [rearWheel, frontWheel]) {
         const r = w.userData.R * 0.62;
@@ -1061,7 +1309,7 @@
     }
 
     bike.position.y = LIFT + S.tire;
-    return { bike, parts, crank, extra, S, moveChain, ringR };
+    return { bike, parts, crank, pedals, extra, S, moveChain, ringR };
   }
 
   /** Dove guardare per ogni pezzo, in base alle misure del modello. */
@@ -1135,15 +1383,21 @@
    */
   function fenderGeometry(radius, from, to, width) {
     const segs = 56;
-    const across = 10;
+    const across = 24;
     const pos = [];
     const idx = [];
     for (let i = 0; i <= segs; i++) {
       const a = from + ((to - from) * i) / segs;
       for (let j = 0; j <= across; j++) {
         const t = (j / across) * 2 - 1;
-        const r = radius - 0.014 * t * t;
-        pos.push(Math.cos(a) * r, Math.sin(a) * r, (t * width) / 2);
+        const edge = Math.max(0, (Math.abs(t) - 0.82) / 0.18);
+        // Cupola, nervatura al centro e bordi ripiegati verso la ruota (come i parafanghi in plastica/alluminio)
+        const r = radius - 0.014 * t * t + 0.0022 * Math.exp(-((t / 0.07) ** 2)) - 0.011 * edge * edge;
+        const zz = (t * width) / 2 * (1 - 0.06 * edge);
+        // Estremità leggermente arrotondate
+        const end = Math.min(i, segs - i) / segs;
+        const taper = end < 0.03 ? 0.9 + (end / 0.03) * 0.1 : 1;
+        pos.push(Math.cos(a) * r, Math.sin(a) * r, zz * taper);
       }
     }
     for (let i = 0; i < segs; i++) {
@@ -1374,7 +1628,9 @@
 
     function flash(part) {
       const list = part === 'all' ? [] : built.parts[part] || [];
-      const mats = [...new Set(list.map((m) => m.material))];
+      const found = [];
+      for (const o of list) o.traverse?.((c) => { if (c.material?.emissive) found.push(c.material); });
+      const mats = [...new Set(found)];
       highlight = mats.length ? { mats, start: performance.now() } : null;
     }
 
@@ -1488,6 +1744,7 @@
       for (const w of built.parts.wheels) w.rotation.z -= (v / w.userData.R) * dt;
       const crankStep = (v / built.S.R) * 0.55 * dt;
       built.crank.rotation.z -= crankStep;
+      for (const p of built.pedals) p.rotation.z = -built.crank.rotation.z;
       // La catena scorre quanto gira la corona
       chainOffset += crankStep * built.ringR;
       built.moveChain(chainOffset);
