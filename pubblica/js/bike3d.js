@@ -635,7 +635,8 @@
     if (S.fenders) {
       // Angoli: 0 = davanti, PI/2 = in alto, PI = dietro
       // Davanti copre da poco sopra l'orizzontale fin dietro la forcella; dietro dal piantone a poco sopra l'altezza del mozzo.
-      const fenders = [[front, S.R, 0.72, 1.7]];
+      // Anteriore spostato indietro: la punta resta alta davanti, la coda scende dietro la forcella.
+      const fenders = [[front, S.R, 0.98, 1.78]];
       if (!S.longtail) fenders.push([rear, rearR, 1.42, 1.62]);
       for (const [c, R, start, arcLen] of fenders) {
         const fr = R + S.tire + 0.022;
