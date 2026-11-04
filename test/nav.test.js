@@ -119,3 +119,16 @@ test('decodifica una polyline a 6 cifre', () => {
   assert.deepEqual(a, { lat: 38.5, lon: -120.2 });
   assert.deepEqual(b, { lat: 40.7, lon: -120.95 });
 });
+
+test('tre percorsi verso la meta: dal più veloce, senza doppioni', async (t) => {
+  const { fetchRoutes } = globalThis.ContaKM;
+  const trip = (km, min) => ({ summary: { length: km, time: min * 60 }, legs: [{ shape: '_izlhA~rlgdF_{geC~ywl@', maneuvers: [] }] });
+  let asked;
+  t.mock.method(globalThis, 'fetch', async (url) => {
+    asked = JSON.parse(decodeURIComponent(url.split('json=')[1]));
+    return { ok: true, json: async () => ({ trip: trip(5.6, 19), alternates: [{ trip: trip(7.1, 17) }, { trip: trip(5.61, 19.2) }] }) };
+  });
+  const routes = await fetchRoutes({ lat: 40, lon: 14 }, { lat: 41, lon: 15 });
+  assert.equal(asked.alternates, 2, 'chiede le alternative');
+  assert.deepEqual(routes.map((r) => Math.round(r.timeS / 60)), [17, 19], 'il doppione quasi uguale è scartato');
+});

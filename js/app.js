@@ -2,7 +2,7 @@
 
 (() => {
   const {
-    Ride, NavSession, arrowAngle, bike3d: bike3dLib, heading: headingLib, bikes: bikeLib, caloriesFor, cloud, startOfWeek, fetchRoute, maneuverIcon, native, realGps, searchPlaces, simGps, store, summarize, trackSegments,
+    Ride, NavSession, arrowAngle, bike3d: bike3dLib, heading: headingLib, bikes: bikeLib, caloriesFor, cloud, distance, newRecords, speedProfile, startOfWeek, weeklyTotals, fetchRoute, fetchRoutes, maneuverIcon, native, realGps, searchPlaces, simGps, store, summarize, trackSegments,
   } = globalThis.ContaKM;
 
   const L = window.L;
@@ -602,16 +602,72 @@
     else if (following) map.panTo(latlng);
   }
 
+  // Percorsi proposti verso la meta (fino a tre) e quello scelto
+  let routeChoices = [];
+  let routeChoice = 0;
+  let altLines = [];
+
+  function clearAlternatives() {
+    for (const l of altLines) l.remove();
+    altLines = [];
+  }
+
   function drawRoute(route) {
+    clearAlternatives();
     if (routeLine) routeLine.remove();
     routeLine = L.polyline(route.coords.map((c) => [c.lat, c.lon]), { color: ROUTE_COLOR, weight: 8, opacity: 0.9 }).addTo(map);
   }
 
+  /** Tutti i percorsi proposti: quello scelto in fucsia sopra, gli altri in grigio. Ognuno si può toccare. */
+  function drawRouteChoices() {
+    clearAlternatives();
+    if (routeLine) routeLine.remove();
+    routeChoices.forEach((route, i) => {
+      if (i === routeChoice) return;
+      const line = L.polyline(route.coords.map((c) => [c.lat, c.lon]), { color: '#7f93ab', weight: 7, opacity: 0.85 }).addTo(map);
+      line.on('click', () => selectRoute(i));
+      altLines.push(line);
+    });
+    routeLine = L.polyline(routeChoices[routeChoice].coords.map((c) => [c.lat, c.lon]), { color: ROUTE_COLOR, weight: 8, opacity: 0.95 }).addTo(map);
+  }
+
+  function selectRoute(i) {
+    routeChoice = i;
+    pendingRoute = routeChoices[i];
+    drawRouteChoices();
+    renderRouteChoices();
+  }
+
+  function renderRouteChoices() {
+    const fastest = Math.min(...routeChoices.map((r) => r.timeS));
+    const shortest = Math.min(...routeChoices.map((r) => r.distanceM));
+    const route = routeChoices[routeChoice];
+    $('preview-info').textContent = `${shortDistance(route.distanceM)} · ${shortDuration(route.timeS)} · arrivo ${clock(Date.now() + route.timeS * 1000)}`;
+    $('route-options').hidden = routeChoices.length < 2;
+    $('route-options').replaceChildren(...routeChoices.map((r, i) => {
+      const li = document.createElement('li');
+      const btn = document.createElement('button');
+      btn.className = 'route-option';
+      btn.setAttribute('aria-pressed', i === routeChoice);
+      const tags = [r.timeS === fastest ? 'Più veloce' : '', r.distanceM === shortest ? 'Più breve' : ''].filter(Boolean);
+      btn.append(
+        textBlock('route-time', shortDuration(r.timeS)),
+        textBlock('route-sub', `${shortDistance(r.distanceM)} · arrivo ${clock(Date.now() + r.timeS * 1000)}`),
+      );
+      if (tags.length) btn.append(textBlock('route-tag', tags.join(' · ')));
+      btn.addEventListener('click', () => selectRoute(i));
+      li.append(btn);
+      return li;
+    }));
+  }
+
   function clearRoute() {
+    clearAlternatives();
     routeLine?.remove();
     destMarker?.remove();
     routeLine = null;
     destMarker = null;
+    routeChoices = [];
   }
 
   function recenter() {
@@ -638,20 +694,25 @@
     }
     toast('Calcolo il percorso…');
     try {
-      const route = await fetchRoute(lastFix, place, routeOptions());
+      // Fino a tre percorsi, dal più veloce: si sceglie toccando la linea o la riga nella scheda
+      routeChoices = await fetchRoutes(lastFix, place, routeOptions());
       $('toast').hidden = true;
       destination = place;
-      pendingRoute = route;
+      routeChoice = 0;
+      pendingRoute = routeChoices[0];
       applyMapRotation(true); // anteprima del percorso con il nord in alto
-      drawRoute(route);
+      drawRouteChoices();
       destMarker?.remove();
       destMarker = L.circleMarker([place.lat, place.lon], { radius: 10, color: '#fff', weight: 3, fillColor: ROUTE_COLOR, fillOpacity: 1 }).addTo(map);
-      map.fitBounds(routeLine.getBounds(), { paddingTopLeft: [30, 30], paddingBottomRight: [30, 220], animate: false });
+      const bounds = routeLine.getBounds();
+      for (const l of altLines) bounds.extend(l.getBounds());
       $('preview-title').textContent = place.title;
-      $('preview-info').textContent = `${shortDistance(route.distanceM)} · ${shortDuration(route.timeS)} · arrivo ${clock(Date.now() + route.timeS * 1000)}`;
+      renderRouteChoices();
       $('preview').hidden = false;
       $('map-strip').hidden = true;
       $('btn-search').hidden = true;
+      // Inquadra tutti i percorsi sopra la scheda (che con le alternative è più alta)
+      map.fitBounds(bounds, { paddingTopLeft: [30, 30], paddingBottomRight: [30, $('preview').offsetHeight + 30], animate: false });
     } catch (err) {
       console.warn('Percorso non disponibile', err);
       toast('Percorso non disponibile. Controlla la connessione e riprova.');
@@ -670,6 +731,7 @@
 
   function startNav() {
     if (!pendingRoute) return;
+    drawRoute(pendingRoute); // via le alternative: resta solo il percorso scelto
     nav = new NavSession(pendingRoute);
     gps.followPath?.(pendingRoute.coords);
     say(pendingRoute.maneuvers[0].spoken);
@@ -874,10 +936,12 @@
       toast('Uscita troppo breve: non salvata');
       return;
     }
+    const records = newRecords(store.loadHistory(), data);
     store.addToHistory(data);
     renderHistory();
     renderBikes();
-    openDetail(data, 'Uscita salvata');
+    openDetail(data, 'Uscita salvata', records);
+    if (records.length) say(`Nuovo record: ${records.join(', ')}!`);
     const due = bikeLib.dueItems(bike, store.loadHistory(), bikeList);
     if (due.length) {
       toast(`Manutenzione per ${bike.name}: ${due.map((i) => i.label.toLowerCase()).join(', ')}`);
@@ -929,6 +993,7 @@
     $('record-top').textContent = kmh(s.topSpeedMs);
 
     renderDash();
+    renderWeeks(allRides);
     $('history-empty').hidden = s.rides > 0;
     $('history').replaceChildren(
       ...history.map((r) => {
@@ -957,9 +1022,12 @@
     return tile;
   }
 
-  function openDetail(r, title) {
+  function openDetail(r, title, records = []) {
     detailRide = r;
     $('detail-title').textContent = title;
+    $('detail-record').hidden = !records.length;
+    $('detail-record-text').textContent = records.length ? `Nuovo record: ${records.join(', ')}` : '';
+    renderSpeedProfile(r);
     $('detail').dataset.saved = title === 'Uscita salvata' ? '1' : '';
     const avgMs = r.movingMs > 0 ? r.distanceM / (r.movingMs / 1000) : 0;
     $('detail-stats').replaceChildren(
@@ -1328,7 +1396,7 @@ ${segments}
   /** In home la bici 3D si carica con calma dopo l'avvio, così l'app parte subito. */
   function setupHomeBike() {
     if (desktop.matches) return;
-    const start = () => bike3dLib.mount($('home-bike'), { zoomable: false, closer: 0.8 })
+    const start = () => bike3dLib.mount($('home-bike'), { zoomable: false, closer: 0.8, shadows: false })
       .then((view) => {
         homeBike = view;
         applyLook(view, activeBike());
@@ -1337,6 +1405,88 @@ ${segments}
       .catch(() => {});
     if ('requestIdleCallback' in window) requestIdleCallback(start, { timeout: 2500 });
     else setTimeout(start, 800);
+  }
+
+  // ---------- Grafici: settimane e velocità ----------
+
+  /** Riquadro con il valore al passaggio del dito o del mouse su una barra o un punto. */
+  function bindChartTips(container) {
+    const tip = container.querySelector('.wk-tip');
+    container.querySelectorAll('[data-tip]').forEach((g) => {
+      const show = () => {
+        tip.textContent = g.dataset.tip;
+        tip.hidden = false;
+        const box = g.getBoundingClientRect();
+        const host = container.getBoundingClientRect();
+        tip.style.left = `${Math.min(host.width - 70, Math.max(70, box.left - host.left + box.width / 2))}px`;
+      };
+      g.addEventListener('pointerenter', show);
+      g.addEventListener('pointerdown', show);
+      g.addEventListener('pointerleave', () => { tip.hidden = true; });
+    });
+  }
+
+  /** Km delle ultime 8 settimane: una barra per settimana, quella in corso evidenziata. */
+  function renderWeeks(history) {
+    const weeks = weeklyTotals(history);
+    $('weeks-card').hidden = !history.length;
+    if (!history.length) return;
+    const max = Math.max(1, ...weeks.map((w) => w.km));
+    const top = Math.max(...weeks.map((w) => w.km));
+    const W = 320;
+    const base = 100;
+    const slot = W / weeks.length;
+    const bw = 22;
+    const parts = weeks.map((w, i) => {
+      const h = w.km > 0 ? Math.max(4, (w.km / max) * 80) : 0;
+      const x = i * slot + (slot - bw) / 2;
+      const y = base - h;
+      const r = Math.min(4, h);
+      const last = i === weeks.length - 1;
+      const bar = h ? `<path class="wk-bar${last ? ' today' : ''}" d="M${x} ${base}V${y + r}Q${x} ${y} ${x + r} ${y}H${x + bw - r}Q${x + bw} ${y} ${x + bw} ${y + r}V${base}Z"/>` : '';
+      const value = w.km > 0 && (last || w.km === top) ? `<text class="wk-value" x="${x + bw / 2}" y="${y - 6}">${number(w.km, 0)}</text>` : '';
+      const d = new Date(w.start);
+      const label = d.toLocaleDateString('it-IT', { day: 'numeric', month: 'numeric' });
+      const tip = `Settimana dal ${d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}: ${number(w.km, 1)} km`;
+      return `<g class="wk-day" data-tip="${tip}"><rect class="wk-hit" x="${i * slot}" y="0" width="${slot}" height="120"/>${bar}${value}<text class="wk-label${last ? ' today' : ''}" x="${x + bw / 2}" y="${base + 16}">${label}</text></g>`;
+    });
+    const chart = $('weeks-chart');
+    chart.innerHTML = `<svg viewBox="0 0 ${W} 120" role="img" aria-label="Km delle ultime 8 settimane"><line class="wk-base" x1="0" x2="${W}" y1="${base}" y2="${base}"/>${parts.join('')}</svg><div class="wk-tip" hidden></div>`;
+    bindChartTips(chart);
+  }
+
+  /** Profilo della velocità di un'uscita: linea nel tempo, con la media tratteggiata. */
+  function renderSpeedProfile(r) {
+    const points = speedProfile(r.track || [], trackSegments, distance);
+    $('detail-speed').hidden = points.length < 6;
+    if (points.length < 6) return;
+    const W = 320;
+    const H = 90;
+    const maxKmh = Math.max(...points.map((p) => p.kmh));
+    const top = Math.max(10, Math.ceil(maxKmh / 10) * 10);
+    const t0 = points[0].t;
+    const t1 = points[points.length - 1].t || 1;
+    const X = (t) => ((t - t0) / Math.max(1, t1 - t0)) * W;
+    const Y = (v) => H - (v / top) * (H - 8);
+    const line = points.map((p, i) => `${i ? 'L' : 'M'}${X(p.t).toFixed(1)} ${Y(p.kmh).toFixed(1)}`).join('');
+    const avg = r.movingMs > 0 ? (r.distanceM / (r.movingMs / 1000)) * 3.6 : 0;
+    const hits = points.filter((_, i) => i % Math.ceil(points.length / 40) === 0).map((p) => {
+      const tip = `${duration(p.t * 1000).replace(/^0:/, '')} · ${number(p.kmh, 1)} km/h`;
+      return `<rect class="wk-hit" data-tip="${tip}" x="${(X(p.t) - 4).toFixed(1)}" y="0" width="8" height="${H}"/>`;
+    });
+    $('detail-speed-max').textContent = `max ${kmh(r.maxSpeedMs)} · media ${number(avg, 1)} km/h`;
+    const chart = $('detail-speed-chart');
+    chart.innerHTML = `<svg viewBox="0 0 ${W} ${H + 14}" role="img" aria-label="Velocità durante l'uscita">
+      <line class="wk-base" x1="0" x2="${W}" y1="${H}" y2="${H}"/>
+      <text class="wk-label sp-start" x="2" y="10">${top}</text>
+      <path class="sp-area" d="${line}L${W} ${H}L0 ${H}Z"/>
+      <path class="sp-line" d="${line}"/>
+      ${avg ? `<line class="sp-avg" x1="0" x2="${W}" y1="${Y(avg).toFixed(1)}" y2="${Y(avg).toFixed(1)}"/>` : ''}
+      <text class="wk-label sp-start" x="0" y="${H + 12}">0:00</text>
+      <text class="wk-label sp-end" x="${W}" y="${H + 12}">${duration(t1 * 1000)}</text>
+      ${hits.join('')}
+    </svg><div class="wk-tip" hidden></div>`;
+    bindChartTips(chart);
   }
 
   // ---------- Dashboard desktop ----------
@@ -1934,6 +2084,20 @@ ${segments}
   setupBikes();
   renderBikePick();
   setupDash();
+  // Benvenuto al primo avvio (chi ha già delle uscite non lo vede)
+  if (!prefs.welcomed && !isDemo) {
+    if (store.loadHistory().length) {
+      prefs.welcomed = true;
+      store.savePrefs(prefs);
+    } else {
+      $('welcome').showModal();
+    }
+  }
+  $('btn-welcome').addEventListener('click', () => {
+    prefs.welcomed = true;
+    savePrefs();
+    $('welcome').close();
+  });
   setupHomeBike();
   headingLib.startCompass((value) => {
     compass = value;

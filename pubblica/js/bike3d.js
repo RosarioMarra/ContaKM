@@ -124,6 +124,50 @@
 
   // ---------- Materiali ----------
 
+  /** Battistrada: righe oblique sottili lungo la gomma, usate come rilievo. */
+  function treadTexture() {
+    const c = document.createElement('canvas');
+    c.width = 64;
+    c.height = 32;
+    const x = c.getContext('2d');
+    x.fillStyle = '#808080';
+    x.fillRect(0, 0, 64, 32);
+    x.strokeStyle = '#3a3a3a';
+    x.lineWidth = 3;
+    for (let i = -32; i < 96; i += 10) {
+      x.beginPath();
+      x.moveTo(i, 4);
+      x.lineTo(i + 8, 16);
+      x.lineTo(i, 28);
+      x.stroke();
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(90, 1);
+    return t;
+  }
+
+  /** Scritta "ContaKM" per il tubo obliquo, come il marchio sui telai veri. */
+  function logoTexture() {
+    const c = document.createElement('canvas');
+    c.width = 512;
+    c.height = 96;
+    const x = c.getContext('2d');
+    x.fillStyle = '#fff';
+    let size = 72;
+    const font = () => `italic 800 ${size}px Inter, "Helvetica Neue", Arial, sans-serif`;
+    x.font = font();
+    while (x.measureText('ContaKM').width > 470 && size > 30) {
+      size -= 2;
+      x.font = font();
+    }
+    x.textBaseline = 'middle';
+    x.fillText('ContaKM', 20, 52);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }
+
   function makeMaterials(color) {
     const std = (c, metalness, roughness) => new THREE.MeshStandardMaterial({ color: c, metalness, roughness });
     const glow = (c, i) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: i });
@@ -134,7 +178,7 @@
       spoke: std(0xaab4bf, 0.8, 0.35),
       dark: std(0x23282f, 0.2, 0.6),
       // Pezzi con materiale proprio: lampeggiano da soli quando si fa manutenzione.
-      tire: std(0x1b1f24, 0, 0.85),
+      tire: Object.assign(std(0x1b1f24, 0, 0.85), { bumpMap: treadTexture(), bumpScale: 0.6 }),
       brake: std(0xd5dbe2, 0.9, 0.2),
       caliper: std(0x2a2f36, 0.5, 0.4),
       chain: std(0x8d969f, 0.85, 0.35),
@@ -148,6 +192,8 @@
       reflector: new THREE.MeshStandardMaterial({ color: 0xff8a1f, emissive: 0xff6a00, emissiveIntensity: 0.35, roughness: 0.3 }),
       lens: new THREE.MeshPhysicalMaterial({ color: 0xffffff, emissive: 0xfff1c4, emissiveIntensity: 1.4, roughness: 0.05, clearcoat: 1 }),
       cable: std(0x15181c, 0.1, 0.5),
+      decal: new THREE.MeshStandardMaterial({ map: logoTexture(), transparent: true, roughness: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
+      blueKnob: std(0x2f7fd0, 0.4, 0.35),
       rubber: std(0x2b3036, 0, 0.9),
       bottle: new THREE.MeshPhysicalMaterial({ color: 0xe9eef3, roughness: 0.35, transmission: 0.25, thickness: 0.02 }),
       lamp: glow(0xfff3c4, 0.9),
@@ -202,8 +248,25 @@
       const cross = (i % 4 < 2 ? 1 : -1) * 0.38;
       g.add(tube([Math.cos(a) * 0.028, Math.sin(a) * 0.028, z], [Math.cos(a + cross) * spokeR, Math.sin(a + cross) * spokeR, 0], 0.0022, mat.spoke, 4));
     }
+    // Cerchio a doppia parete: bordo esterno e canale più scuro dove entrano i nippli dei raggi
+    const lip = new THREE.Mesh(new THREE.TorusGeometry(R - S.tire + 0.002, 0.0045, 6, 72), mat.metal);
+    for (const z of [-0.011, 0.011]) {
+      const l = lip.clone();
+      l.position.z = z * (S.tire > 0.06 ? 2.2 : 1);
+      g.add(l);
+    }
+    const nipples = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.0026, 0.0026, 0.012, 6), mat.metal, spokes);
+    const m4 = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    for (let i = 0; i < spokes; i++) {
+      const a = (i / spokes) * Math.PI * 2 + (i % 4 < 2 ? 1 : -1) * 0.38;
+      q.setFromAxisAngle(new THREE.Vector3(0, 0, 1), a - Math.PI / 2);
+      nipples.setMatrixAt(i, m4.compose(new THREE.Vector3(Math.cos(a) * (spokeR + 0.004), Math.sin(a) * (spokeR + 0.004), 0), q, new THREE.Vector3(1, 1, 1)));
+    }
+    g.add(nipples);
     const valve = tube([0, -(R - S.tire - 0.02), 0], [0, -(R - S.tire - 0.055), 0], 0.004, mat.metal, 6);
-    g.add(valve);
+    const valveCap = tube([0, -(R - S.tire - 0.055), 0], [0, -(R - S.tire - 0.068), 0], 0.005, mat.dark, 8);
+    g.add(valve, valveCap);
     // Freno a disco a sinistra: pista frenante forata e ragno a sei bracci fissato al mozzo
     const rotorR = R < 0.3 ? 0.07 : S.knobby ? 0.09 : 0.08;
     const rotorZ = -S.forkZ - 0.008;
@@ -374,7 +437,29 @@
         bike.add(tube(v3([headLow.x, headLow.y], z * 0.5), v3([front.x, front.y], z), S.tire > 0.06 ? 0.018 : 0.013, mat.frame));
       }
     }
-    if (S.fork === 'suspension') bike.add(box(0.06, 0.03, Z * 2.8, mat.dark, [headLow.x, headLow.y - 0.01, 0]));
+    if (S.fork === 'suspension') {
+      bike.add(box(0.06, 0.03, Z * 2.8, mat.dark, [headLow.x, headLow.y - 0.01, 0]));
+      const mid = headLow.clone().lerp(front, 0.45);
+      // Archetto che unisce i foderi, parapolvere e manopola di blocco
+      bike.add(curve([[mid.x + 0.02, mid.y - 0.01, -Z], [mid.x + 0.05, mid.y + 0.03, 0], [mid.x + 0.02, mid.y - 0.01, Z]], 0.012, mat.dark, 20));
+      for (const z of [-Z, Z]) {
+        const seal = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.012, 16), mat.rubber);
+        seal.position.set(mid.x, mid.y, z);
+        seal.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), headLow.clone().sub(front).normalize());
+        bike.add(seal);
+      }
+      const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.014, 12), mat.blueKnob);
+      knob.position.set(headLow.x, headLow.y + 0.012, Z * 0.7);
+      bike.add(knob);
+    }
+    // Sgancio rapido delle ruote (lato sinistro): dado e leva
+    for (const [c, ang] of [[front, Math.atan2(headLow.y - front.y, headLow.x - front.x)], [rear, Math.atan2(S.bb[1] - rear.y, S.bb[0] - rear.x) + 0.4]]) {
+      const nut = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.012, 14), mat.metal);
+      nut.rotation.x = Math.PI / 2;
+      nut.position.set(c.x, c.y, -Z - 0.03);
+      const lever = box(0.065, 0.012, 0.006, mat.metal, [c.x + Math.cos(ang) * 0.034, c.y + Math.sin(ang) * 0.034, -Z - 0.037], ang);
+      bike.add(nut, lever);
+    }
 
     // Pinze dei freni a disco a sinistra: corpo sagomato a cavallo del disco più l'adattatore sul telaio
     const rotorEdge = (R) => (R < 0.3 ? 0.07 : S.knobby ? 0.09 : 0.08) * 0.85;
@@ -420,10 +505,30 @@
     saddle.rotation.z = 0.04;
     bike.add(saddle);
     parts.saddle.push(saddle);
+    // Binari della sella e morsetto in cima al reggisella
+    const clampAt = v3([saddleX, S.saddleY - 0.03]);
+    bike.add(box(0.04, 0.018, 0.04, mat.dark, [clampAt.x, clampAt.y, 0]));
+    for (const z of [-0.022, 0.022]) {
+      const rail = curve([[saddleX + 0.1, S.saddleY - 0.012, z * 0.5], [saddleX + 0.05, S.saddleY - 0.028, z], [saddleX - 0.06, S.saddleY - 0.028, z], [saddleX - 0.1, S.saddleY - 0.012, z * 1.3]], 0.0035, mat.metal, 20);
+      bike.add(rail);
+      parts.saddle.push(rail);
+    }
 
     // ---- Attacco e manubrio ----
     const stemTop = S.top === 'fold' ? v3([head.x - 0.03, 0.98]) : v3([head.x + 0.03, head.y + 0.1]);
     bike.add(tube(head, stemTop, S.top === 'fold' ? 0.019 : 0.016, mat.metal));
+    // Distanziali sotto l'attacco e placca con le quattro viti che tiene il manubrio
+    const steer = head.clone().sub(headLow).normalize();
+    for (let i = 0; i < 3; i++) {
+      const spacer = new THREE.Mesh(new THREE.CylinderGeometry(T * 1.25, T * 1.25, 0.008, 18), i === 1 ? mat.metal : mat.dark);
+      spacer.position.copy(head).addScaledVector(steer, 0.018 + i * 0.009);
+      spacer.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), steer);
+      bike.add(spacer);
+    }
+    bike.add(box(0.012, 0.034, 0.042, mat.metal, [stemTop.x + 0.016, stemTop.y, 0]));
+    for (const [dy, dz] of [[0.011, 0.014], [0.011, -0.014], [-0.011, 0.014], [-0.011, -0.014]]) {
+      bike.add(tube([stemTop.x + 0.022, stemTop.y + dy, dz], [stemTop.x + 0.026, stemTop.y + dy, dz], 0.0032, mat.dark, 6));
+    }
     const barParts = [];
     if (S.bar === 'drop') {
       for (const s of [-1, 1]) {
@@ -438,7 +543,14 @@
     } else {
       const w = S.bar === 'wide' ? 0.36 : 0.27;
       barParts.push(tube(v3([stemTop.x, stemTop.y], -w), v3([stemTop.x, stemTop.y], w), 0.013, mat.bar));
-      for (const s of [-1, 1]) barParts.push(tube(v3([stemTop.x, stemTop.y], s * (w - 0.07)), v3([stemTop.x, stemTop.y], s * (w + 0.005)), 0.02, mat.dark));
+      for (const s of [-1, 1]) {
+        barParts.push(tube(v3([stemTop.x, stemTop.y], s * (w - 0.07)), v3([stemTop.x, stemTop.y], s * (w + 0.005)), 0.02, mat.dark));
+        // Anelli di bloccaggio delle manopole
+        const lock = new THREE.Mesh(new THREE.CylinderGeometry(0.021, 0.021, 0.008, 14), mat.metal);
+        lock.rotation.x = Math.PI / 2;
+        lock.position.set(stemTop.x, stemTop.y, s * (w - 0.074));
+        barParts.push(lock);
+      }
     }
     for (const p of barParts) bike.add(p);
     parts.handlebar.push(...barParts);
@@ -452,6 +564,20 @@
       const screen = box(0.04, 0.002, 0.06, mat.screen, [stemTop.x - 0.028, stemTop.y + 0.037, 0], 0.5);
       bike.add(display, screen);
       parts.handlebar.push(display, screen);
+      // Comando dell'assistenza vicino alla manopola sinistra, con i tasti + e -
+      const remoteZ = S.bar === 'drop' ? -0.13 : S.bar === 'riser' ? -0.2 : -((S.bar === 'wide' ? 0.36 : 0.27) - 0.12);
+      const remote = box(0.03, 0.02, 0.028, mat.dark, [stemTop.x - 0.01, stemTop.y + 0.018, remoteZ]);
+      bike.add(remote);
+      for (const dx of [-0.007, 0.007]) bike.add(box(0.008, 0.004, 0.012, mat.metal, [stemTop.x - 0.01 + dx, stemTop.y + 0.03, remoteZ]));
+      parts.handlebar.push(remote);
+    }
+    if (S.battery) {
+      // Presa di ricarica con tappo di gomma, sopra il movimento centrale
+      const port = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.012, 14), mat.rubber);
+      port.rotation.x = Math.PI / 2;
+      port.position.copy(bb.clone().lerp(S.top === 'low' || S.top === 'fold' ? headLow : seat, 0.12)).add(new THREE.Vector3(0, 0, T * 1.3));
+      bike.add(port);
+      parts.battery.push(port);
     }
 
     // ---- Trasmissione e motore ----
@@ -487,6 +613,10 @@
       crank.add(tube(tip, [tip[0], tip[1], pz + Math.sign(z) * 0.04], 0.005, mat.metal, 6));
       crank.add(box(0.1, 0.012, 0.08, mat.rubber, [tip[0], tip[1], pz]));
       crank.add(box(0.1, 0.022, 0.006, mat.dark, [tip[0], tip[1], pz - 0.04]), box(0.1, 0.022, 0.006, mat.dark, [tip[0], tip[1], pz + 0.04]));
+      if (S.comfort || S.reflectors) {
+        // Catarifrangenti arancioni davanti e dietro al pedale
+        for (const dx of [-0.051, 0.051]) crank.add(box(0.004, 0.014, 0.05, mat.reflector, [tip[0] + dx, tip[1], pz]));
+      }
     }
     bike.add(crank);
     const ringR = S.motor === 'mid' ? 0.085 : 0.1;
@@ -809,6 +939,26 @@
       bike.add(curve([[stemTop.x - 0.025, stemTop.y + 0.02, 0.02], [head.x + 0.06, head.y + 0.02, 0.03], [head.x + 0.01, head.y - 0.08, 0.025]], 0.003, mat.cable, 30));
     }
 
+    // Marchio sul telaio, ai due lati del tubo obliquo (sul piantone nei telai bassi)
+    {
+      const onSeat = S.top === 'low' || S.top === 'fold';
+      const a = onSeat ? bb.clone().lerp(seat, 0.35) : bb.clone().lerp(headLow, 0.32);
+      const b = onSeat ? bb.clone().lerp(seat, 0.75) : bb.clone().lerp(headLow, 0.72);
+      const dir = b.clone().sub(a);
+      const r = onSeat ? T : T * (S.battery === 'integrated' ? 1.75 : 1.15);
+      const len = dir.length();
+      const geo = new THREE.PlaneGeometry(len, len * (96 / 512));
+      for (const side of [1, -1]) {
+        const holder = new THREE.Group();
+        holder.position.copy(a).addScaledVector(dir, 0.5).add(new THREE.Vector3(0, 0, side * (r + 0.0012)));
+        holder.rotation.z = Math.atan2(dir.y, dir.x);
+        const logo = new THREE.Mesh(geo, mat.decal);
+        if (side < 0) logo.rotation.y = Math.PI;
+        holder.add(logo);
+        bike.add(holder);
+      }
+    }
+
     bike.position.y = LIFT + S.tire;
     return { bike, parts, crank, extra, S, moveChain, ringR };
   }
@@ -1002,10 +1152,36 @@
     const rimLight = new THREE.DirectionalLight(0x88ccff, 0.9);
     rimLight.position.set(-3, 1.5, -2);
     scene.add(sun, rimLight);
+    // Ombre vere della bici sul pavimento (solo dove serve la qualità: garage e computer)
+    const shadows = options.shadows !== false;
+    if (shadows) {
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      sun.castShadow = true;
+      sun.shadow.mapSize.set(1024, 1024);
+      Object.assign(sun.shadow.camera, { left: -1.4, right: 1.4, top: 1.4, bottom: -1.4, near: 0.5, far: 8 });
+      sun.shadow.bias = -0.0005;
+      sun.shadow.radius = 4;
+    }
 
     const mat = makeMaterials(options.color || '#38bdf8');
+    // Marchio scuro sui telai chiari, chiaro su quelli scuri
+    const paintDecal = () => {
+      const c = mat.frame.color;
+      const lum = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+      mat.decal.color.set(lum > 0.45 ? 0x1a2230 : 0xffffff);
+      mat.decal.opacity = 0.9;
+    };
+    paintDecal();
     const turntable = new THREE.Group();
     turntable.add(shadowMesh());
+    if (shadows) {
+      const floor = new THREE.Mesh(new THREE.PlaneGeometry(4, 3), new THREE.ShadowMaterial({ opacity: 0.32 }));
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = LIFT + 0.001;
+      floor.receiveShadow = true;
+      turntable.add(floor);
+    }
     scene.add(turntable);
 
     // Strada e paletti: compaiono in uscita e scorrono alla velocità vera.
@@ -1043,6 +1219,7 @@
         built.bike.traverse((o) => o.geometry?.dispose());
       }
       built = buildBike(style, mat, electric);
+      if (shadows) built.bike.traverse((o) => { if (o.isMesh) o.castShadow = true; });
       turntable.add(built.bike);
     }
     rebuild();
@@ -1257,6 +1434,7 @@
       },
       setColor(css) {
         mat.frame.color.set((css || '').trim() || '#38bdf8');
+        paintDecal();
       },
       setStyle(name) {
         if (!STYLES[name] || name === style) return;
