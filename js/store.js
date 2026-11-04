@@ -18,8 +18,8 @@
     accentV2: true, // dal colore predefinito arancio si passa una volta all'azzurro
     kmAlert: 5,
     bikeType: 'Hybrid',
-    wecity: true,
     speedStyle: 'digital', // 'digital' oppure 'analog'
+    panelCollapsed: false, // pannello dei dati in home ridotto a una riga
     activeBikeId: null,
     weightKg: 75,
     weeklyGoalKm: 50,
