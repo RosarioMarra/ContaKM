@@ -2,7 +2,7 @@
 
 (() => {
   const {
-    Ride, NavSession, arrowAngle, bike3d: bike3dLib, bikes: bikeLib, caloriesFor, cloud, startOfWeek, fetchRoute, maneuverIcon, native, realGps, searchPlaces, simGps, store, summarize, trackSegments,
+    Ride, NavSession, arrowAngle, bike3d: bike3dLib, heading: headingLib, bikes: bikeLib, caloriesFor, cloud, startOfWeek, fetchRoute, maneuverIcon, native, realGps, searchPlaces, simGps, store, summarize, trackSegments,
   } = globalThis.ContaKM;
 
   const L = window.L;
@@ -62,7 +62,9 @@
     }
   }
   let lastFix = null;
-  let heading = null;
+  let heading = null;       // direzione di marcia dal GPS
+  let compass = null;       // direzione del telefono dalla bussola (giroscopio e magnetometro)
+  let compassAsked = false;
   let gpsStarted = false;
   let gpsError = false;
   let lastSaveAt = 0;
@@ -494,6 +496,37 @@
     });
   }
 
+  /** Direzione da usare: GPS quando si pedala, bussola da fermi o piano. */
+  function currentHeading() {
+    const speedMs = Number.isFinite(lastFix?.speed) ? lastFix.speed : ride.speedMs;
+    return headingLib.bestHeading({ gps: heading, speedMs, compass });
+  }
+
+  let riderPaintQueued = false;
+  /** Ruota la freccia sulla mappa; con la bussola arrivano molti valori al secondo, si disegna a ogni frame. */
+  function paintRider() {
+    if (riderPaintQueued) return;
+    riderPaintQueued = true;
+    requestAnimationFrame(() => {
+      riderPaintQueued = false;
+      const svg = riderMarker?.getElement()?.querySelector('svg');
+      const h = currentHeading();
+      if (!svg || h == null) return;
+      // La rotazione prende la strada più corta (da 350° a 10° non fa il giro intero).
+      const prev = Number(svg.dataset.angle ?? h);
+      const next = prev + ((((h - prev) % 360) + 540) % 360) - 180;
+      svg.dataset.angle = String(next);
+      svg.style.transform = `rotate(${next}deg)`;
+    });
+  }
+
+  /** Su iPhone la bussola va chiesta con un tocco: lo si fa al primo Avvia o alla prima apertura della mappa. */
+  function askCompass() {
+    if (compassAsked) return;
+    compassAsked = true;
+    headingLib.askCompassPermission();
+  }
+
   function updateMapPosition(firstFix) {
     if (!map || !lastFix) return;
     const latlng = [lastFix.lat, lastFix.lon];
@@ -505,8 +538,7 @@
     } else {
       riderMarker.setLatLng(latlng);
     }
-    const svg = riderMarker.getElement()?.querySelector('svg');
-    if (svg && heading != null) svg.style.transform = `rotate(${heading}deg)`;
+    paintRider();
     if (pendingRoute) return;
     if (firstFix) map.setView(latlng, 16);
     else if (following) map.panTo(latlng);
@@ -533,7 +565,7 @@
   // ---------- Navigatore ----------
 
   const routeOptions = () => ({
-    heading,
+    heading: currentHeading(),
     bikeType: activeBike().type,
   });
 
@@ -1572,10 +1604,16 @@ ${segments}
 
   function bindEvents() {
     document.querySelectorAll('.tab').forEach((tab) => {
-      tab.addEventListener('click', () => showView(tab.dataset.view));
+      tab.addEventListener('click', () => {
+        askCompass();
+        showView(tab.dataset.view);
+      });
     });
 
-    $('btn-start').addEventListener('click', startRide);
+    $('btn-start').addEventListener('click', () => {
+      askCompass();
+      startRide();
+    });
     $('btn-resume').addEventListener('click', startRide);
     $('btn-pause').addEventListener('click', () => {
       ride.pause();
@@ -1633,6 +1671,10 @@ ${segments}
   setupBikes();
   renderBikePick();
   setupDash();
+  headingLib.startCompass((value) => {
+    compass = value;
+    paintRider();
+  });
   bindEvents();
   // Dati arrivati da un altro telefono: si ridisegna tutto quello che li mostra.
   cloud.init({
