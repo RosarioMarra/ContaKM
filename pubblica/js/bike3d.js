@@ -33,10 +33,10 @@
     bar: 'flat', fork: 'rigid', top: 'straight',
   };
   const STYLES = {
-    classic: { ...BASE, kickstand: true, bottle: true },
-    city: { ...BASE, seat: [-0.17, 0.8], head: [0.36, 0.9], headLow: [0.41, 0.72], tire: 0.03, bar: 'riser', top: 'low', saddleY: 0.97, fenders: true, rack: true, lamp: true, chainguard: true, tanwall: true, kickstand: true, comfort: true },
+    classic: { ...BASE, kickstand: true, bottle: true, reflectors: true, double: true },
+    city: { ...BASE, seat: [-0.17, 0.8], head: [0.36, 0.9], headLow: [0.41, 0.72], tire: 0.03, bar: 'riser', top: 'low', saddleY: 0.97, fenders: true, rack: true, lamp: true, chainguard: true, tanwall: true, kickstand: true, comfort: true, reflectors: true },
     mtb: { ...BASE, seat: [-0.15, 0.76], head: [0.4, 0.86], headLow: [0.45, 0.66], tube: 0.03, tire: 0.042, bar: 'wide', fork: 'suspension', top: 'sloped', saddleY: 0.97, knobby: true, bottle: true },
-    road: { ...BASE, seat: [-0.17, 0.86], head: [0.4, 0.85], headLow: [0.43, 0.72], tube: 0.02, tire: 0.018, bar: 'drop', saddleY: 1.01, bottle: true },
+    road: { ...BASE, seat: [-0.17, 0.86], head: [0.4, 0.85], headLow: [0.43, 0.72], tube: 0.02, tire: 0.018, bar: 'drop', saddleY: 1.01, bottle: true, double: true },
 
     'e-city': { ...BASE, seat: [-0.17, 0.8], head: [0.36, 0.9], headLow: [0.41, 0.72], tire: 0.032, bar: 'riser', top: 'low', saddleY: 0.97, fenders: true, rack: true, lamp: true, chainguard: true, battery: 'rack', motor: 'mid', display: true, tailLight: true, tanwall: true, kickstand: true, comfort: true },
     'e-trekking': { ...BASE, seat: [-0.16, 0.8], head: [0.39, 0.88], headLow: [0.43, 0.7], tube: 0.027, tire: 0.031, fork: 'suspension', top: 'sloped', saddleY: 0.98, fenders: true, rack: true, lamp: true, battery: 'integrated', motor: 'mid', display: true, tailLight: true, kickstand: true },
@@ -74,6 +74,21 @@
 
   // ---------- Materiali ----------
 
+  /** Sfumatura per i fasci di luce: piena alla punta del cono (la lampada), trasparente alla base. */
+  function beamFade() {
+    const c = document.createElement('canvas');
+    c.width = 4;
+    c.height = 128;
+    const x = c.getContext('2d');
+    const g = x.createLinearGradient(0, 0, 0, 128);
+    g.addColorStop(0, '#fff');
+    g.addColorStop(0.35, '#777');
+    g.addColorStop(1, '#000');
+    x.fillStyle = g;
+    x.fillRect(0, 0, 4, 128);
+    return new THREE.CanvasTexture(c);
+  }
+
   function makeMaterials(color) {
     const std = (c, metalness, roughness) => new THREE.MeshStandardMaterial({ color: c, metalness, roughness });
     const glow = (c, i) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: i });
@@ -95,6 +110,11 @@
       bell: std(0xe8ecf0, 1, 0.15),
       spring: std(0xff7a1a, 0.6, 0.3),
       tan: std(0xb98a5a, 0, 0.8),
+      reflector: new THREE.MeshStandardMaterial({ color: 0xff8a1f, emissive: 0xff6a00, emissiveIntensity: 0.35, roughness: 0.3 }),
+      lens: new THREE.MeshPhysicalMaterial({ color: 0xffffff, emissive: 0xfff1c4, emissiveIntensity: 1.4, roughness: 0.05, clearcoat: 1 }),
+      // Fasci di luce: forti vicino alla lampada, svaniscono nell'aria
+      beam: new THREE.MeshBasicMaterial({ color: 0xfff1c4, alphaMap: beamFade(), transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }),
+      redBeam: new THREE.MeshBasicMaterial({ color: 0xff3030, alphaMap: beamFade(), transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }),
       cable: std(0x15181c, 0.1, 0.5),
       rubber: std(0x2b3036, 0, 0.9),
       bottle: new THREE.MeshPhysicalMaterial({ color: 0xe9eef3, roughness: 0.35, transmission: 0.25, thickness: 0.02 }),
@@ -152,15 +172,39 @@
     }
     const valve = tube([0, -(R - S.tire - 0.02), 0], [0, -(R - S.tire - 0.055), 0], 0.004, mat.metal, 6);
     g.add(valve);
-    // Disco del freno a sinistra
-    const rotorR = R < 0.3 ? 0.07 : 0.08;
-    const rotor = new THREE.Mesh(new THREE.CylinderGeometry(rotorR, rotorR, 0.004, 40), mat.brake);
-    rotor.rotation.x = Math.PI / 2;
-    rotor.position.z = -S.forkZ - 0.008;
-    const rotorHub = new THREE.Mesh(new THREE.TorusGeometry(rotorR * 0.62, 0.006, 6, 24), mat.caliper);
-    rotorHub.position.z = rotor.position.z;
-    g.add(rotor, rotorHub);
-    parts.brakes.push(rotor);
+    // Freno a disco a sinistra: pista frenante forata e ragno a sei bracci fissato al mozzo
+    const rotorR = R < 0.3 ? 0.07 : S.knobby ? 0.09 : 0.08;
+    const rotorZ = -S.forkZ - 0.008;
+    const disc = new THREE.Shape();
+    disc.absarc(0, 0, rotorR, 0, Math.PI * 2, false);
+    const inner = new THREE.Path();
+    inner.absarc(0, 0, rotorR * 0.7, 0, Math.PI * 2, true);
+    disc.holes.push(inner);
+    for (let i = 0; i < 18; i++) {
+      const a = (i / 18) * Math.PI * 2;
+      const hole = new THREE.Path();
+      hole.absarc(Math.cos(a) * rotorR * 0.85, Math.sin(a) * rotorR * 0.85, rotorR * 0.045, 0, Math.PI * 2, true);
+      disc.holes.push(hole);
+    }
+    const rotor = new THREE.Mesh(new THREE.ExtrudeGeometry(disc, { depth: 0.002, bevelEnabled: false, curveSegments: 24 }), mat.brake);
+    rotor.position.z = rotorZ - 0.001;
+    const spiderParts = [new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.006, 6), mat.caliper)];
+    spiderParts[0].rotation.x = Math.PI / 2;
+    spiderParts[0].position.z = rotorZ;
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      const arm = box(rotorR * 0.5, 0.009, 0.003, mat.caliper, [Math.cos(a) * rotorR * 0.45, Math.sin(a) * rotorR * 0.45, rotorZ], a);
+      spiderParts.push(arm);
+    }
+    g.add(rotor, ...spiderParts);
+    parts.brakes.push(rotor, ...spiderParts);
+    if (S.reflectors) {
+      // Catarifrangenti arancioni sui raggi
+      for (const a of [0.4, 0.4 + Math.PI]) {
+        const refl = box(0.05, 0.016, 0.006, mat.reflector, [Math.cos(a) * R * 0.62, Math.sin(a) * R * 0.62, 0], a);
+        g.add(refl);
+      }
+    }
     if (side === 'rear') {
       for (let i = 0; i < 10; i++) {
         const cog = new THREE.Mesh(new THREE.TorusGeometry(0.03 + i * 0.008, 0.005, 6, 28), mat.chain);
@@ -180,7 +224,7 @@
 
   function buildBike(styleName, mat, extraBattery) {
     const S = STYLES[styleName] || STYLES.classic;
-    const parts = { tyres: [], brakes: [], chain: [], battery: [], saddle: [], handlebar: [], bell: [], wheels: [] };
+    const parts = { tyres: [], brakes: [], chain: [], battery: [], saddle: [], handlebar: [], bell: [], wheels: [], lights: [] };
     const bike = new THREE.Group();
     const rearR = S.rearR || S.R;
     const rear = v3([S.rear, rearR]);
@@ -274,11 +318,29 @@
     }
     if (S.fork === 'suspension') bike.add(box(0.06, 0.03, Z * 2.8, mat.dark, [headLow.x, headLow.y - 0.01, 0]));
 
-    // Pinze dei freni a sinistra
-    const caliperF = box(0.06, 0.04, 0.03, mat.caliper, [front.x - 0.055, front.y + 0.055, -Z - 0.016], -0.5);
-    const caliperR = box(0.06, 0.04, 0.03, mat.caliper, [rear.x + 0.06, rear.y + 0.05, -Z - 0.016], 0.6);
+    // Pinze dei freni a disco a sinistra: corpo sagomato a cavallo del disco più l'adattatore sul telaio
+    const rotorEdge = (R) => (R < 0.3 ? 0.07 : S.knobby ? 0.09 : 0.08) * 0.85;
+    function caliper(c, R, angle) {
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.016, 0.038, 4, 10), mat.caliper);
+      body.rotation.z = angle + Math.PI / 2;
+      const halfA = body.clone();
+      body.position.z = -0.006;
+      halfA.position.z = 0.008;
+      halfA.scale.set(0.85, 1, 0.85);
+      const adapter = box(0.045, 0.012, 0.006, mat.metal, [0, 0, 0.012], angle);
+      adapter.position.x = -Math.cos(angle) * 0.022;
+      adapter.position.y = -Math.sin(angle) * 0.022;
+      const bleed = tube([0, 0, -0.022], [0, 0, -0.03], 0.004, mat.metal, 6);
+      g.add(body, halfA, adapter, bleed);
+      const d = rotorEdge(R);
+      g.position.set(c.x + Math.cos(angle) * d, c.y + Math.sin(angle) * d, -Z - 0.009);
+      return g;
+    }
+    const caliperF = caliper(front, S.R, Math.PI * 0.62);
+    const caliperR = caliper(rear, rearR, Math.PI * 0.32);
     bike.add(caliperF, caliperR);
-    parts.brakes.push(caliperF, caliperR);
+    parts.brakes.push(...caliperF.children, ...caliperR.children);
 
     // ---- Sella ----
     const saddleX = seat.x - 0.04;
@@ -376,17 +438,40 @@
     bike.add(chainTop, chainLow);
     parts.chain.push(chainTop, chainLow);
     if (S.motor !== 'hub' || S.top !== 'fold') {
-      // Deragliatore posteriore: braccio e due rotelline sotto i pignoni
+      // Cambio posteriore: forcellino, parallelogramma, gabbia con due rotelline dentate
       const derailleur = new THREE.Group();
-      derailleur.add(box(0.02, 0.1, 0.012, mat.dark, [rear.x + 0.005, rear.y - 0.05, chainZ + 0.012], -0.15));
-      for (const dy of [-0.055, -0.105]) {
-        const pulley = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.008, 16), mat.dark);
+      const dz = chainZ + 0.016;
+      derailleur.add(box(0.03, 0.022, 0.008, mat.metal, [rear.x - 0.005, rear.y - 0.022, dz], -0.4));
+      derailleur.add(box(0.045, 0.026, 0.02, mat.dark, [rear.x - 0.02, rear.y - 0.05, dz], 0.5));
+      const p1 = v3([rear.x - 0.012, rear.y - 0.075], chainZ);
+      const p2 = v3([rear.x + 0.012, rear.y - 0.135], chainZ);
+      for (const p of [p1, p2]) {
+        const pulley = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.007, 12), mat.dark);
         pulley.rotation.x = Math.PI / 2;
-        pulley.position.set(rear.x + 0.01 + dy * 0.12, rear.y + dy, chainZ);
+        pulley.position.copy(p);
         derailleur.add(pulley);
+        const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.03, 8), mat.metal);
+        hub.rotation.x = Math.PI / 2;
+        hub.position.copy(p);
+        derailleur.add(hub);
       }
+      for (const z of [chainZ - 0.009, chainZ + 0.009]) derailleur.add(tube(v3([p1.x, p1.y], z), v3([p2.x, p2.y], z), 0.013, mat.metal, 8));
       bike.add(derailleur);
       parts.chain.push(...derailleur.children);
+      // La catena scende dal pignone, gira sulle rotelline e torna alla corona
+      bike.add(tube(v3([rear.x - 0.03, rear.y - 0.03], chainZ), p1, 0.005, mat.chain, 6));
+    }
+    if (S.double) {
+      // Doppia corona e cambio anteriore sul piantone
+      const small = new THREE.Mesh(new THREE.TorusGeometry(0.074, 0.007, 8, 40), mat.chain);
+      small.position.set(bb.x, bb.y, chainZ - 0.012);
+      bike.add(small);
+      parts.chain.push(small);
+      const fd = bb.clone().lerp(seat, 0.27);
+      for (const z of [chainZ + 0.012, chainZ - 0.016]) {
+        bike.add(box(0.075, 0.03, 0.003, mat.metal, [fd.x + 0.035, fd.y - 0.005, z], -0.25));
+      }
+      bike.add(tube(v3([fd.x, fd.y], 0), v3([fd.x + 0.02, fd.y], chainZ), 0.008, mat.dark, 8));
     }
     if (S.chainguard) {
       const len = bb.distanceTo(rear) * 0.75;
@@ -509,16 +594,55 @@
       }
     }
 
-    if (S.lamp) {
-      const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.025, 0.05, 18), mat.lamp);
-      lamp.rotation.z = Math.PI / 2;
-      lamp.position.set(headLow.x + 0.06, headLow.y + 0.02, 0);
-      bike.add(lamp);
+    // ---- Luci ----
+    // Faro: sulla forcella per le bici da città, sotto il manubrio per le altre. Il fascio è un cono che si apre.
+    const lampAt = S.lamp ? v3([headLow.x + 0.065, headLow.y + 0.02]) : v3([stemTop.x + 0.05, stemTop.y - 0.035]);
+    const lampBody = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.022, 0.06, 18), mat.dark);
+    lampBody.rotation.z = Math.PI / 2;
+    lampBody.position.copy(lampAt);
+    const lens = new THREE.Mesh(new THREE.CircleGeometry(0.025, 20), mat.lens);
+    lens.rotation.y = Math.PI / 2;
+    lens.position.copy(lampAt).add(new THREE.Vector3(0.031, 0, 0));
+    const beam = new THREE.Mesh(new THREE.ConeGeometry(0.32, 1.3, 28, 1, true), mat.beam);
+    beam.rotation.z = Math.PI / 2;
+    beam.position.copy(lampAt).add(new THREE.Vector3(0.68, -0.06, 0));
+    beam.rotation.y = 0;
+    bike.add(lampBody, lens, beam);
+    if (!S.lamp) bike.add(tube(v3([stemTop.x + 0.01, stemTop.y - 0.005]), lampAt, 0.005, mat.dark, 6));
+    // Fanalino rosso: sul portapacchi o sul reggisella
+    const tx = S.longtail ? rear.x - 0.39 : S.rack ? -0.675 : saddleX - 0.035;
+    const ty = S.longtail ? 0.6 : S.rack ? 0.74 : S.saddleY - 0.13;
+    const tailBody = box(0.022, 0.05, 0.034, mat.dark, [tx + 0.006, ty, 0]);
+    const tailLens = box(0.006, 0.04, 0.028, mat.tail, [tx - 0.006, ty, 0]);
+    const tailGlow = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.45, 20, 1, true), mat.redBeam);
+    tailGlow.rotation.z = -Math.PI / 2;
+    tailGlow.position.set(tx - 0.24, ty - 0.02, 0);
+    bike.add(tailBody, tailLens, tailGlow);
+    parts.lights = [lampBody, lens, tailBody, tailLens];
+
+    // ---- Comandi del cambio e cavi ----
+    if (S.bar !== 'drop') {
+      // Comando a levetta sotto la manopola destra (e sinistra con la doppia corona)
+      for (const s of S.double ? [-1, 1] : [1]) {
+        const at = leverAt(s);
+        const pod = box(0.03, 0.022, 0.026, mat.dark, [at.x + 0.005, at.y - 0.02, at.z - s * 0.035]);
+        bike.add(pod);
+        parts.chain.push(pod);
+      }
     }
-    if (S.tailLight) {
-      const x = S.longtail ? rear.x - 0.38 : S.rack ? -0.67 : saddleX - 0.04;
-      const y = S.longtail ? 0.6 : S.rack ? 0.74 : S.saddleY - 0.12;
-      bike.add(box(0.02, 0.025, 0.05, mat.tail, [x, y, 0]));
+    // Cavo del cambio posteriore: dal comando lungo il tubo obliquo e il fodero destro fino al deragliatore
+    const shiftFrom = leverAt(1).clone().add(new THREE.Vector3(0, -0.02, -0.03));
+    const downMid = S.top === 'low' || S.top === 'fold' ? v3([0.15, 0.4], 0.035) : bb.clone().lerp(headLow, 0.5).add(new THREE.Vector3(0, -T * 1.4, 0.03));
+    bike.add(curve([shiftFrom, [head.x + 0.14, stemTop.y - 0.02, 0.06], [headLow.x + 0.02, headLow.y - 0.03, 0.035], downMid,
+      [bb.x + 0.02, bb.y - 0.05, 0.035], [bb.x - 0.12, bb.y + 0.0, 0.055], [rear.x + 0.12, rear.y + 0.015, 0.06], [rear.x - 0.02, rear.y - 0.04, chainZ + 0.03]], 0.0032, mat.cable, 90));
+    if (S.double) {
+      const fd = bb.clone().lerp(seat, 0.27);
+      bike.add(curve([leverAt(-1).clone().add(new THREE.Vector3(0, -0.02, 0.03)), [head.x + 0.14, stemTop.y - 0.02, -0.06], [headLow.x + 0.02, headLow.y - 0.03, -0.03],
+        bb.clone().lerp(headLow, 0.5).add(new THREE.Vector3(0, -T * 1.4, -0.03)), [bb.x + 0.03, bb.y - 0.05, -0.02], [fd.x + 0.01, fd.y - 0.04, 0.04], [fd.x + 0.02, fd.y, chainZ]], 0.0032, mat.cable, 80));
+    }
+    if (S.display) {
+      // Cavo del display che entra nel tubo sterzo
+      bike.add(curve([[stemTop.x - 0.025, stemTop.y + 0.02, 0.02], [head.x + 0.06, head.y + 0.02, 0.03], [head.x + 0.01, head.y - 0.08, 0.025]], 0.003, mat.cable, 30));
     }
 
     bike.position.y = LIFT + S.tire;
@@ -542,6 +666,10 @@
         return { target: p, dist: 1.0, yaw: 0.35 };
       }
       case 'saddle': return { target: [S.seat[0] - 0.05, y0 + S.saddleY, 0], dist: 0.85, yaw: 0.55 };
+      case 'lights': {
+        const p = S.lamp ? [S.headLow[0] + 0.07, y0 + S.headLow[1] + 0.02, 0] : [S.head[0] + 0.08, y0 + S.head[1] + 0.06, 0];
+        return { target: p, dist: 0.9, yaw: -0.5 };
+      }
       case 'handlebar': return { target: [S.head[0], y0 + (S.top === 'fold' ? 0.98 : S.head[1] + 0.1), 0], dist: 1.0, yaw: -0.7 };
       default: return { target: [center, -0.02 + (S.R - 0.34) * 0.5, 0], dist: 3.3 * Math.max(1, length / 1.74) };
     }
@@ -755,7 +883,7 @@
     new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; }).observe(container);
 
     function setGoal(part) {
-      const known = ['tyres', 'brakes', 'chain', 'battery', 'saddle', 'handlebar'].includes(part);
+      const known = ['tyres', 'brakes', 'chain', 'battery', 'saddle', 'handlebar', 'lights'].includes(part);
       focusPart = known ? part : 'all';
       const f = focusFor(focusPart, built.S);
       goal.target.set(...f.target);
