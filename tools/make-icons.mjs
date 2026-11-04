@@ -5,7 +5,7 @@ import { deflateSync } from 'node:zlib';
 
 const BG = [11, 17, 28];
 const DIAL = [255, 255, 255];
-const NEEDLE = [255, 122, 26];
+const NEEDLE = [56, 189, 248]; // azzurro, come il colore predefinito dell'app
 const hex = (c) => `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 
 // Disegno su una griglia 0..100. Il centro è più in basso di 50 per compensare l'apertura del quadrante.
@@ -18,8 +18,8 @@ const NEEDLE_TIP = [61.3, 42.7];
 const NEEDLE_WIDTH = 7;
 const HUB_RADIUS = 7;
 const CORNER = 22;
-const ICON_SCALE = 1.15;
-const MASKABLE_SCALE = 1.05;
+const ICON_SCALE = 0.92;
+const MASKABLE_SCALE = 0.85;
 const SAFE_RADIUS = 40; // Android non ritaglia mai dentro questo cerchio
 
 function logoSvg() {

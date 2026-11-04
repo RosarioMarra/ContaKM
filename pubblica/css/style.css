@@ -211,7 +211,7 @@ h2 { font-size: 20px; font-weight: 800; margin: 18px 0 8px; }
 .leaflet-control-attribution { font-size: 10px; }
 
 .rider { filter: drop-shadow(0 1px 3px rgba(0, 0, 0, .5)); }
-.rider svg { width: 44px; height: 44px; stroke: none; display: block; transition: transform .3s; }
+.rider svg { width: 44px; height: 44px; stroke: none; display: block; transition: transform .15s linear; }
 
 /* Uscite */
 #view-history { user-select: text; }
@@ -413,7 +413,7 @@ body {
 .logo-anim { border-radius: 8px; }
 .logo-needle { stroke: var(--accent); fill: var(--accent); transform-origin: 50px 54px; animation: needle-wake 1.3s cubic-bezier(.3, 1.6, .5, 1) .15s backwards; }
 @keyframes needle-wake { 0% { transform: rotate(-135deg); } 55% { transform: rotate(40deg); } 100% { transform: rotate(0); } }
-:root[data-theme="sun"] .logo-needle { stroke: #ff7a1a; fill: #ff7a1a; }
+:root[data-theme="sun"] .logo-needle { stroke: #38bdf8; fill: #38bdf8; }
 
 /* Riquadri della home che entrano uno dopo l'altro */
 #view-ride .stat, #view-ride .controls { animation: tile-in .5s cubic-bezier(.2, .8, .2, 1) backwards; }
