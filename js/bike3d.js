@@ -168,6 +168,53 @@
     return t;
   }
 
+  /** Schermo del telefono sul manubrio con ContaKM aperto: velocità grande e km, letti dal ciclista. */
+  function phoneTexture() {
+    const c = document.createElement('canvas');
+    c.width = 512;
+    c.height = 240;
+    const x = c.getContext('2d');
+    // Il telefono è in verticale davanti al ciclista: si disegna ruotato di 90°.
+    x.translate(512, 0);
+    x.rotate(Math.PI / 2);
+    const W = 240;
+    const H = 512;
+    const bg = x.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#13233a');
+    bg.addColorStop(1, '#0b1422');
+    x.fillStyle = bg;
+    x.fillRect(0, 0, W, H);
+    x.strokeStyle = '#38bdf8';
+    x.lineWidth = 14;
+    x.lineCap = 'round';
+    x.globalAlpha = 0.25;
+    x.beginPath();
+    x.arc(W / 2, 200, 86, Math.PI * 0.8, Math.PI * 2.2);
+    x.stroke();
+    x.globalAlpha = 1;
+    x.beginPath();
+    x.arc(W / 2, 200, 86, Math.PI * 0.8, Math.PI * 1.75);
+    x.stroke();
+    x.textAlign = 'center';
+    x.fillStyle = '#ffffff';
+    x.font = '800 70px Inter, Arial, sans-serif';
+    x.fillText('24', W / 2, 218);
+    x.fillStyle = '#8fa3ba';
+    x.font = '700 22px Inter, Arial, sans-serif';
+    x.fillText('km/h', W / 2, 250);
+    x.fillStyle = '#ffffff';
+    x.font = '800 34px Inter, Arial, sans-serif';
+    x.fillText('12,8 km', W / 2, 360);
+    x.fillStyle = '#38bdf8';
+    x.fillRect(30, 420, W - 60, 46);
+    x.fillStyle = '#062033';
+    x.font = '800 22px Inter, Arial, sans-serif';
+    x.fillText('PAUSA', W / 2, 451);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }
+
   function makeMaterials(color) {
     const std = (c, metalness, roughness) => new THREE.MeshStandardMaterial({ color: c, metalness, roughness });
     const glow = (c, i) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: i });
@@ -200,6 +247,10 @@
       tail: glow(0xff3b3b, 0.9),
       screen: glow(0x38bdf8, 0.7),
       led: glow(0x34d399, 1),
+      phone: new THREE.MeshBasicMaterial({ map: phoneTexture(), toneMapped: false }),
+      mirror: std(0xdfe8f2, 1, 0.04),
+      bag: std(0x2d3a2f, 0, 0.85),
+      wicker: std(0x9a7a52, 0.1, 0.75),
     };
   }
 
@@ -937,6 +988,98 @@
     if (S.display) {
       // Cavo del display che entra nel tubo sterzo
       bike.add(curve([[stemTop.x - 0.025, stemTop.y + 0.02, 0.02], [head.x + 0.06, head.y + 0.02, 0.03], [head.x + 0.01, head.y - 0.08, 0.025]], 0.003, mat.cable, 30));
+    }
+
+    // ---- Dettagli di tutti i giorni ----
+    if (!S.display) {
+      // Telefono sul manubrio con ContaKM aperto, nel suo supporto a quattro ganci
+      const phone = new THREE.Group();
+      phone.position.set(stemTop.x - 0.015, stemTop.y + 0.04, 0);
+      phone.rotation.z = 0.55;
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.152, 0.009, 0.074), mat.dark);
+      const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.142, 0.066), mat.phone);
+      screen.rotation.x = -Math.PI / 2;
+      screen.position.y = 0.0047;
+      phone.add(body, screen);
+      for (const [px, pz] of [[0.06, 0.038], [0.06, -0.038], [-0.06, 0.038], [-0.06, -0.038]]) {
+        phone.add(new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.014, 0.006), mat.rubber).translateX(px).translateZ(pz));
+      }
+      bike.add(phone);
+      bike.add(tube(v3([stemTop.x - 0.005, stemTop.y + 0.004]), v3([stemTop.x - 0.012, stemTop.y + 0.034]), 0.008, mat.dark, 8));
+      parts.handlebar.push(body);
+    }
+    if (S.comfort || styleName === 'e-trekking') {
+      // Specchietto retrovisore sulla manopola sinistra
+      const end = S.bar === 'riser' ? v3([stemTop.x - 0.1, stemTop.y + 0.04], -0.31) : v3([stemTop.x, stemTop.y], -0.25);
+      const top = end.clone().add(new THREE.Vector3(-0.04, 0.2, -0.06));
+      bike.add(curve([end, end.clone().add(new THREE.Vector3(0.02, 0.08, -0.03)), top], 0.005, mat.dark, 16));
+      const housing = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.04, 0.018, 24), mat.dark);
+      housing.rotation.z = Math.PI / 2;
+      housing.position.copy(top);
+      const glass = new THREE.Mesh(new THREE.CircleGeometry(0.036, 24), mat.mirror);
+      glass.rotation.y = -Math.PI / 2;
+      glass.position.copy(top).add(new THREE.Vector3(-0.0095, 0, 0));
+      bike.add(housing, glass);
+      parts.handlebar.push(housing, glass);
+    }
+    if (S.fenders && !S.longtail && S.top !== 'fold') {
+      // Lucchetto ad anello sui foderi alti, sopra la ruota dietro: chiave inserita e anello che abbraccia la gomma
+      const dir = v3([stayTop.x, stayTop.y]).sub(v3([rear.x, rear.y])).normalize();
+      const at = v3([rear.x, rear.y]).addScaledVector(dir, rearR + S.tire + 0.075);
+      const lock = box(0.05, 0.075, Z * 2.2, mat.dark, [at.x, at.y, 0], Math.atan2(dir.y, dir.x) - Math.PI / 2);
+      const key = box(0.012, 0.02, 0.006, mat.metal, [at.x + 0.02, at.y + 0.01, Z * 1.1 + 0.006]);
+      bike.add(lock, key);
+    }
+    if (S.reflectors || S.comfort) {
+      // Catarifrangenti arancioni sui raggi: girano con le ruote
+      for (const w of [rearWheel, frontWheel]) {
+        const r = w.userData.R * 0.62;
+        for (const side of [-1, 1]) {
+          const refl = box(0.05, 0.016, 0.01, mat.reflector, [0, 0, 0]);
+          refl.position.set(side * r * 0.6, side * r * 0.8, 0.012 * side);
+          refl.rotation.z = Math.atan2(side * r * 0.8, side * r * 0.6) + Math.PI / 2;
+          w.add(refl);
+        }
+      }
+    }
+    if (styleName === 'e-trekking') {
+      // Borsa da viaggio agganciata a sinistra del portapacchi, con tasca e striscia riflettente
+      const bag = new THREE.Group();
+      bag.position.set(-0.47, 0.6, -0.13);
+      const shell = box(0.3, 0.27, 0.11, mat.bag, [0, 0, 0]);
+      const flap = box(0.31, 0.06, 0.115, mat.bag, [0, 0.125, 0]);
+      const pocket = box(0.18, 0.13, 0.03, mat.bag, [0.02, -0.03, -0.068]);
+      const strip = box(0.3, 0.012, 0.004, mat.lens, [0, 0.07, -0.0565]);
+      for (const m of [shell, flap, pocket, strip]) bag.add(m);
+      for (const hx of [-0.08, 0.08]) bag.add(box(0.03, 0.03, 0.02, mat.dark, [hx, 0.15, 0.05]));
+      bike.add(bag);
+    }
+    if (styleName === 'city') {
+      // Cestino di vimini davanti al manubrio, con le due astine fino al mozzo anteriore
+      const bx = stemTop.x + 0.19;
+      const by = stemTop.y - 0.04;
+      const w = 0.27;
+      const d = 0.34;
+      const h = 0.19;
+      const basket = new THREE.Group();
+      basket.position.set(bx, by, 0);
+      basket.add(box(w, 0.012, d, mat.wicker, [0, -h / 2, 0]));
+      for (const y of [-h / 2, -h / 6, h / 6, h / 2]) {
+        for (const [ax, az, bx2, bz] of [[-w / 2, -d / 2, w / 2, -d / 2], [w / 2, -d / 2, w / 2, d / 2], [w / 2, d / 2, -w / 2, d / 2], [-w / 2, d / 2, -w / 2, -d / 2]]) {
+          basket.add(tube([ax, y, az], [bx2, y, bz], y === h / 2 ? 0.007 : 0.004, mat.wicker, 6));
+        }
+      }
+      for (let i = 0; i <= 14; i++) {
+        const t = i / 14;
+        for (const z of [-d / 2, d / 2]) basket.add(tube([-w / 2 + t * w, -h / 2, z], [-w / 2 + t * w, h / 2, z], 0.0035, mat.wicker, 5));
+      }
+      for (let i = 0; i <= 18; i++) {
+        const t = i / 18;
+        for (const x of [-w / 2, w / 2]) basket.add(tube([x, -h / 2, -d / 2 + t * d], [x, h / 2, -d / 2 + t * d], 0.0035, mat.wicker, 5));
+      }
+      bike.add(basket);
+      for (const z of [-0.09, 0.09]) bike.add(tube(v3([bx + 0.06, by - h / 2], z), v3([front.x, front.y], Math.sign(z) * Z * 1.15), 0.0045, mat.metal, 6));
+      bike.add(tube(v3([stemTop.x + 0.01, stemTop.y - 0.01]), v3([bx - w / 2, by + 0.02]), 0.006, mat.metal, 6));
     }
 
     // Marchio sul telaio, ai due lati del tubo obliquo (sul piantone nei telai bassi)
