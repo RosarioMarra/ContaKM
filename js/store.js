@@ -7,6 +7,7 @@
     recents: 'contakm.recents',
     favorites: 'contakm.favorites',
     prefs: 'contakm.prefs',
+    bikes: 'contakm.bikes',
   };
 
   const DEFAULT_PREFS = {
@@ -17,6 +18,7 @@
     bikeType: 'Hybrid',
     wecity: true,
     speedStyle: 'digital', // 'digital' oppure 'analog'
+    activeBikeId: null,
     weightKg: 75,
     weeklyGoalKm: 50,
     serviceEveryKm: 300,
@@ -53,12 +55,17 @@
     },
 
     loadHistory: () => read(KEYS.history, []),
-    addToHistory(ride) {
-      const history = [ride, ...store.loadHistory()];
+    saveHistory(history) {
       // Memoria piena: si sacrificano le tracce più vecchie, mai i km.
       for (let i = history.length - 1; !write(KEYS.history, history) && i > 0; i--) {
         history[i] = { ...history[i], track: [] };
       }
+    },
+    addToHistory(ride) {
+      store.saveHistory([ride, ...store.loadHistory()]);
+    },
+    setRideBike(startedAt, bikeId) {
+      store.saveHistory(store.loadHistory().map((r) => (r.startedAt === startedAt ? { ...r, bikeId } : r)));
     },
     removeFromHistory(startedAt) {
       write(KEYS.history, store.loadHistory().filter((r) => r.startedAt !== startedAt));
@@ -78,6 +85,9 @@
       write(KEYS.favorites, others.length === favorites.length ? [place, ...favorites] : others);
     },
 
+    loadBikes: () => read(KEYS.bikes, []),
+    saveBikes: (bikes) => write(KEYS.bikes, bikes),
+
     loadPrefs: () => ({ ...DEFAULT_PREFS, ...read(KEYS.prefs, {}) }),
     savePrefs: (prefs) => write(KEYS.prefs, prefs),
 
@@ -85,6 +95,7 @@
       app: 'ContaKM',
       history: store.loadHistory(),
       favorites: store.loadFavorites(),
+      bikes: store.loadBikes(),
       prefs: store.loadPrefs(),
     }),
     /** Unisce un backup ai dati presenti; restituisce quante uscite ha aggiunto. */
@@ -102,6 +113,12 @@
         const extra = data.favorites.filter((p) =>
           Number.isFinite(p?.lat) && Number.isFinite(p.lon) && !favorites.some((f) => samePlace(f, p)));
         write(KEYS.favorites, [...favorites, ...extra]);
+      }
+      if (Array.isArray(data.bikes)) {
+        const bikes = store.loadBikes();
+        const extra = data.bikes.filter((b) =>
+          typeof b?.id === 'string' && Array.isArray(b.maintenance) && !bikes.some((k) => k.id === b.id));
+        write(KEYS.bikes, [...bikes, ...extra]);
       }
       return added.length;
     },
