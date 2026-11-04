@@ -20,9 +20,9 @@
 <body>
 <main>
   <h1>Informativa sulla privacy di ContaKM</h1>
-  <p class="meta">Ultimo aggiornamento: 4 novembre 2026 (registrazione in sottofondo)</p>
+  <p class="meta">Ultimo aggiornamento: 4 novembre 2026 (account e copia online)</p>
 
-  <p>ContaKM è un conta km e navigatore per la bici. Non ha account, non usa pubblicità e non raccoglie statistiche di utilizzo. Questa pagina spiega quali dati usa l'app e dove vanno.</p>
+  <p>ContaKM è un conta km e navigatore per la bici. Si usa anche senza account, non usa pubblicità e non raccoglie statistiche di utilizzo. Questa pagina spiega quali dati usa l'app e dove vanno.</p>
 
   <h2>Posizione</h2>
   <p>L'app chiede l'accesso alla posizione (GPS) per misurare velocità e km percorsi e per guidarti con il navigatore.</p>
@@ -30,7 +30,12 @@
   <p>L'app chiede anche il permesso di mostrare le notifiche, che serve solo per quell'avviso.</p>
 
   <h2>Dati salvati sul telefono</h2>
-  <p>Uscite, percorsi registrati, luoghi recenti e preferiti e impostazioni restano salvati solo sul tuo telefono. Non vengono inviati a nessun server di ContaKM, perché ContaKM non ha server. Puoi cancellarli eliminando le singole uscite o disinstallando l'app.</p>
+  <p>Uscite, percorsi registrati, bici e manutenzione, luoghi recenti e preferiti e impostazioni sono salvati sul tuo telefono. Se non accedi con un account, restano solo lì. Puoi cancellarli eliminando le singole uscite o disinstallando l'app.</p>
+
+  <h2>Account e copia online (facoltativi)</h2>
+  <p>Se scegli "Accedi con Google", l'accesso è gestito da <strong>Supabase</strong> tramite Google. ContaKM riceve da Google solo nome, indirizzo email e immagine del profilo, e non vede mai la tua password.</p>
+  <p>Con l'accesso attivo, una copia di uscite (con i percorsi registrati, quindi posizioni e orari), bici, manutenzione, impostazioni e luoghi preferiti viene salvata sul database Supabase del progetto ContaKM. Serve solo a ritrovare i tuoi dati su un altro telefono o dopo una reinstallazione. Ogni account vede soltanto i propri dati. I dati non vengono venduti, condivisi con terzi o usati per pubblicità.</p>
+  <p>Puoi uscire dall'account quando vuoi: i dati restano sul telefono. Puoi anche <a href="elimina-account.html">eliminare l'account</a>: account e copia online vengono cancellati subito e per sempre.</p>
 
   <h2>Servizi esterni</h2>
   <p>Per mappe, ricerca e percorsi l'app usa servizi pubblici gratuiti basati su OpenStreetMap. A questi servizi arrivano, come per qualsiasi sito web, il tuo indirizzo IP e i dati strettamente necessari alla richiesta:</p>
@@ -38,6 +43,7 @@
     <li><strong>Mappa</strong> (OpenFreeMap e OpenStreetMap): la zona della mappa che stai guardando.</li>
     <li><strong>Ricerca luoghi</strong> (Photon di Komoot): il testo che cerchi e la tua posizione approssimativa, per mostrare prima i risultati vicini.</li>
     <li><strong>Percorsi</strong> (Valhalla di FOSSGIS): il punto di partenza e la destinazione.</li>
+    <li><strong>Account</strong> (Supabase e Google), solo se accedi: i dati descritti sopra.</li>
   </ul>
   <p>Questi dati vengono inviati solo quando usi mappa, ricerca o navigatore e sono trattati secondo le informative dei rispettivi servizi.</p>
 
