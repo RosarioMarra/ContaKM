@@ -423,6 +423,8 @@
   let map = null;
   let riderMarker = null;
   let routeLine = null;
+  let trailLine = null;      // strada già fatta in questa uscita, disegnata dal vivo
+  let rideFromNav = false;   // l'uscita è partita con "Parti" del navigatore
   let destMarker = null;
   let following = true;
 
@@ -481,6 +483,7 @@
     map = L.map('map', { zoomControl: false, center: [41.9, 12.5], zoom: 6, maxZoom: 19 });
     map.attributionControl.setPrefix(false);
     createTiles(map);
+    updateTrail();
     map.on('dragstart', () => {
       following = false;
       $('btn-locate').hidden = false;
@@ -518,8 +521,25 @@
     headingLib.askCompassPermission();
   }
 
+  /** Disegna sulla mappa il percorso già registrato (come nel dettaglio dell'uscita), fino alla posizione attuale. */
+  function updateTrail() {
+    if (!map) return;
+    const segments = trackSegments(ride.track).map((s) => s.map((p) => [p[0], p[1]]));
+    if (ride.state === 'running' && lastFix && ride.track.length) {
+      if (!segments.length) segments.push([[ride.track[0][0], ride.track[0][1]]]);
+      segments[segments.length - 1].push([lastFix.lat, lastFix.lon]);
+    }
+    if (!trailLine) {
+      trailLine = L.polyline([], { color: accentColor(), weight: 6, opacity: 0.85, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(map);
+    }
+    trailLine.setStyle({ color: accentColor() });
+    trailLine.setLatLngs(ride.state === 'idle' ? [] : segments);
+    trailLine.bringToFront(); // sopra la linea del navigatore: si vede la strada già fatta
+  }
+
   function updateMapPosition(firstFix) {
     if (!map || !lastFix) return;
+    updateTrail();
     const latlng = [lastFix.lat, lastFix.lon];
     if (!riderMarker) {
       riderMarker = L.marker(latlng, {
@@ -583,7 +603,8 @@
       $('preview').hidden = false;
       $('map-strip').hidden = true;
       $('btn-search').hidden = true;
-    } catch {
+    } catch (err) {
+      console.warn('Percorso non disponibile', err);
       toast('Percorso non disponibile. Controlla la connessione e riprova.');
     }
   }
@@ -611,6 +632,8 @@
     following = true;
     $('btn-locate').hidden = true;
     if (lastFix) map.setView([lastFix.lat, lastFix.lon], 17);
+    // "Parti" avvia anche la registrazione; se l'uscita parte da qui, all'arrivo viene salvata da sola.
+    if (ride.state === 'idle') rideFromNav = true;
     if (ride.state !== 'running') ride.start();
     updateScreenLock();
     if (lastFix) updateNav(lastFix);
@@ -632,8 +655,13 @@
     const status = nav.update(fix);
     if (status.arrived) {
       say('Sei arrivato');
-      toast('Sei arrivato!');
       stopNav();
+      if (rideFromNav) {
+        // Arrivati a destinazione: l'uscita si salva da sola e compare con il percorso fatto.
+        finishRide();
+      } else {
+        toast('Sei arrivato! L\'uscita continua: Pausa e poi Termina per salvarla');
+      }
       return true;
     }
     renderTurn(status);
@@ -677,6 +705,7 @@
     if (btn.classList.contains('confirm')) {
       disarmTurnClose();
       stopNav();
+      if (ride.state === 'running') toast('Navigazione chiusa: l\'uscita continua a registrare. Pausa e poi Termina per salvarla');
       return;
     }
     // Due tocchi: un urto sul manubrio non deve interrompere la navigazione.
@@ -785,7 +814,9 @@
     const data = { ...ride.toJSON(), endedAt: Date.now(), bikeId: bike.id };
     store.clearCurrent();
     ride = new Ride();
+    rideFromNav = false;
     announcedKmSteps = 0;
+    updateTrail();
     if (nav) stopNav();
     updateScreenLock();
     render();
@@ -906,12 +937,12 @@
       detailMap.fitBounds(line.getBounds(), { padding: [20, 20], animate: false });
       createTiles(detailMap);
       line.addTo(detailMap);
-      drawRoute(line);
+      animateTrack(line);
     }
   }
 
   /** Il percorso si "disegna" da partenza ad arrivo, come se lo si stesse rifacendo. */
-  function drawRoute(line) {
+  function animateTrack(line) {
     const path = line.getElement?.();
     if (!path?.getTotalLength || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const len = path.getTotalLength();
