@@ -65,7 +65,8 @@
     [/fren|pastigl|disc/i, 'brakes'],
     [/copert|gomm|pneum|ruot|camer/i, 'tyres'],
     [/batter|motor/i, 'battery'],
-    [/caten|cambi|deragl|pignon|corona|trasmiss/i, 'chain'],
+    [/cambi|deragl|pignon|rotellin/i, 'gears'],
+    [/caten|corona|trasmiss/i, 'chain'],
   ];
   function partFor(item) {
     if (item?.key && PART_FOR_KEY[item.key]) return PART_FOR_KEY[item.key];
