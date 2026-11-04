@@ -8,9 +8,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>ContaKM</title>
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="icons/logo.svg" type="image/svg+xml">
-  <link rel="alternate icon" href="icons/icon-192.png">
-  <link rel="apple-touch-icon" href="icons/maskable-192.png">
+  <link rel="icon" href="icons/logo.svg?v=2" type="image/svg+xml">
+  <link rel="alternate icon" href="icons/icon-192.png?v=2">
+  <link rel="apple-touch-icon" href="icons/maskable-192.png?v=2">
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="vendor/maplibre/maplibre-gl.css">
   <link rel="stylesheet" href="css/style.css">
@@ -35,6 +35,7 @@
     <symbol id="i-destination" viewBox="0 0 24 24"><path d="M6 22V3M6 4h12l-3 4 3 4H6"/></symbol>
     <symbol id="i-bike" viewBox="0 0 24 24"><circle cx="5.500" cy="16.500" r="3.500"/><circle cx="18.500" cy="16.500" r="3.500"/><path d="M5.500 16.500 9.500 9h6l3 7.500M9.500 9 12 16.500h-1M8 6h3M14 6h2l1.500 3"/></symbol>
     <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.200-4 4.300-6 8-6s6.800 2 8 6"/></symbol>
     <symbol id="i-target" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.500"/><path d="m20.500 20.500-4.800-4.800M11 8.500v5M8.500 11h5"/></symbol>
     <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4ZM13.500 6.500l4 4"/></symbol>
   </svg>
@@ -101,6 +102,13 @@
           <div class="speed-unit">km/h <span class="speed-note" id="speed-note"></span></div>
         </div>
 
+        <div class="ride-panel" id="ride-panel">
+          <button class="panel-toggle" id="panel-toggle" aria-expanded="true" aria-controls="ride-panel-body">
+            <span class="panel-mini" id="panel-mini"></span>
+            <span class="panel-toggle-text" id="panel-toggle-text">Riduci</span>
+            <svg class="panel-chev"><use href="#i-chevron"/></svg>
+          </button>
+          <div class="ride-panel-body" id="ride-panel-body">
         <div class="stats">
           <div class="stat stat-main"><div class="stat-value" id="stat-distance">0,00</div><div class="stat-label">km percorsi</div></div>
           <div class="stat stat-main"><div class="stat-value" id="stat-time">0:00:00</div><div class="stat-label">tempo</div></div>
@@ -116,13 +124,14 @@
           <div class="stat-label">km totali</div>
           <div class="stat-value" id="stat-total">0,0</div>
         </div>
+          </div>
 
-        <div class="controls">
-          <a class="btn btn-secondary btn-wecity" id="btn-wecity" hidden>Apri WeCity</a>
-          <button class="btn btn-primary" id="btn-start">Avvia</button>
-          <button class="btn btn-pause" id="btn-pause" hidden>Pausa</button>
-          <button class="btn btn-primary" id="btn-resume" hidden>Riprendi</button>
-          <button class="btn btn-stop" id="btn-finish" hidden>Termina</button>
+          <div class="controls">
+            <button class="btn btn-primary" id="btn-start">Avvia</button>
+            <button class="btn btn-pause" id="btn-pause" hidden>Pausa</button>
+            <button class="btn btn-primary" id="btn-resume" hidden>Riprendi</button>
+            <button class="btn btn-stop" id="btn-finish" hidden>Termina</button>
+          </div>
         </div>
       </section>
 
@@ -174,45 +183,52 @@
       </section>
 
       <section id="view-more" class="view scroll" hidden>
-        <div class="more-head">
-          <img class="logo logo-large" src="icons/logo.svg" alt="">
-          <div class="more-name">ContaKM</div>
+        <div class="profile-card" id="account">
+          <div class="profile-top">
+            <div class="avatar" aria-hidden="true">
+              <img id="profile-photo" alt="" referrerpolicy="no-referrer" hidden>
+              <span id="profile-initials">C</span>
+            </div>
+            <div class="profile-who">
+              <div class="profile-name" id="profile-name">Ciclista</div>
+              <div class="profile-mail" id="profile-mail">Dati solo su questo telefono</div>
+            </div>
+          </div>
+          <div class="profile-stats">
+            <div><b id="profile-km">0</b><span>km totali</span></div>
+            <div><b id="profile-rides">0</b><span>uscite</span></div>
+            <div><b id="profile-bikes">1</b><span>bici</span></div>
+          </div>
+          <p class="profile-sync" id="account-text"></p>
+          <div class="profile-actions">
+            <button class="btn btn-primary" id="btn-login" hidden>Accedi con Google</button>
+            <button class="btn btn-secondary" id="btn-sync" hidden>Sincronizza ora</button>
+            <button class="btn btn-secondary" id="btn-logout" hidden>Esci</button>
+          </div>
         </div>
 
-        <section class="account" id="account">
-          <h2>Account</h2>
-          <p class="hint" id="account-text"></p>
-          <div class="tools">
-            <button class="btn btn-primary wide" id="btn-login" hidden>Accedi con Google</button>
-            <button class="btn btn-secondary wide" id="btn-sync" hidden>Sincronizza ora</button>
-            <button class="btn btn-secondary wide" id="btn-logout" hidden>Esci</button>
-            <button class="btn btn-stop wide" id="btn-delete-account" hidden>Elimina account</button>
+        <h2>Le mie preferenze</h2>
+        <div class="pref-group">
+          <label class="field"><span>Come ti chiami</span><input id="set-name" type="text" maxlength="30" autocomplete="nickname" placeholder="Il tuo nome"></label>
+          <div class="setting"><div class="setting-label">Colore dell'app</div><div class="segmented" id="set-accent"></div></div>
+          <button class="toggle" id="set-voice"><span>Voce: annunci e navigatore</span><span class="switch"></span></button>
+          <div class="setting"><div class="setting-label">Annuncia km e media ogni</div><div class="segmented" id="set-km-alert"></div></div>
+          <button class="toggle" id="set-sun"><span>Schermo per il sole (alto contrasto)</span><span class="switch"></span></button>
+          <div class="setting stepper-row">
+            <div class="setting-label">Peso (kg), per le calorie</div>
+            <div class="stepper" id="set-weight"><button aria-label="Meno">−</button><span class="stepper-value"></span><button aria-label="Più">+</button></div>
           </div>
-        </section>
-
-        <h2>Aspetto</h2>
-        <div class="setting"><div class="setting-label">Colore</div><div class="segmented" id="set-accent"></div></div>
+          <div class="setting stepper-row">
+            <div class="setting-label">Obiettivo km a settimana</div>
+            <div class="stepper" id="set-goal"><button aria-label="Meno">−</button><span class="stepper-value"></span><button aria-label="Più">+</button></div>
+          </div>
+          <p class="hint" id="pref-sync-hint">Con l'accesso le preferenze ti seguono su ogni telefono.</p>
+        </div>
 
         <h2>Le tue bici</h2>
         <ul class="history" id="bike-list"></ul>
         <button class="btn btn-secondary wide add-btn" id="btn-bike-add">Aggiungi bici</button>
         <p class="hint">Il navigatore sceglie sempre il percorso più breve, anche per stradine e vicoli, adatto al tipo della bici in uso.</p>
-
-        <h2>WeCity</h2>
-        <button class="toggle" id="set-wecity"><span>Mostra il pulsante Apri WeCity</span><span class="switch"></span></button>
-
-        <h2>Voce</h2>
-        <div class="setting"><div class="setting-label">Annuncia km e media ogni</div><div class="segmented" id="set-km-alert"></div></div>
-
-        <h2>I tuoi dati</h2>
-        <div class="setting stepper-row">
-          <div class="setting-label">Peso (kg), per le calorie</div>
-          <div class="stepper" id="set-weight"><button aria-label="Meno">−</button><span class="stepper-value"></span><button aria-label="Più">+</button></div>
-        </div>
-        <div class="setting stepper-row">
-          <div class="setting-label">Obiettivo km a settimana</div>
-          <div class="stepper" id="set-goal"><button aria-label="Meno">−</button><span class="stepper-value"></span><button aria-label="Più">+</button></div>
-        </div>
 
         <h2>Strumenti</h2>
         <div class="tools">
@@ -221,6 +237,13 @@
           <button class="btn btn-secondary wide" id="btn-restore">Carica backup</button>
           <button class="btn btn-secondary wide" id="btn-demo">Prova il giro simulato</button>
         </div>
+
+        <div class="danger" id="danger-zone" hidden>
+          <h2>Account</h2>
+          <button class="btn btn-stop wide" id="btn-delete-account">Elimina account</button>
+          <p class="hint">Cancella account e copia online. Uscite e bici restano su questo telefono.</p>
+        </div>
+        <p class="about"><a href="privacy.html" target="_blank" rel="noopener">Informativa privacy</a> · <a href="elimina-account.html" target="_blank" rel="noopener">Eliminare l'account</a></p>
         <input type="file" id="restore-file" accept="application/json,.json" hidden>
       </section>
     </main>
@@ -269,7 +292,7 @@
       <button class="tab" data-view="ride" aria-current="page"><svg><use href="#i-gauge"/></svg>Conta km</button>
       <button class="tab" data-view="map"><svg><use href="#i-map"/></svg>Mappa</button>
       <button class="tab" data-view="history"><svg><use href="#i-list"/></svg>Uscite</button>
-      <button class="tab" data-view="more"><svg><use href="#i-sliders"/></svg>Altro</button>
+      <button class="tab" data-view="more"><svg><use href="#i-user"/></svg>Profilo</button>
     </nav>
   </div>
 
@@ -331,7 +354,7 @@
       </div>
     </div>
     <div class="garage-tools">
-      <div class="field"><span>Telaio</span><div class="segmented" id="bike-frame"></div></div>
+      <div class="field"><span>Modello</span><div class="frame-picker" id="bike-frame"></div></div>
       <div class="field"><span>Colore</span><div class="swatches" id="bike-colors"></div></div>
     </div>
     <button class="btn btn-primary wide" id="btn-bike-use">Usa questa bici</button>

@@ -38,11 +38,19 @@ Con una finestra larga (almeno 1100 × 640) l'app diventa compatta a sinistra e 
 
 ## Bici 3D
 
-La bici 3D (`js/bike3d.js`, three.js caricato solo quando serve) compare in home quando sei ferma, nella scheda di ogni bici (il "garage") e nella dashboard su computer. Si gira trascinando, si avvicina con due dita o la rotellina, il campanello suona al tocco e un tocco sulla bici fa girare le ruote. Nella scheda si scelgono telaio (classico, città, MTB, corsa) e colore; toccando una voce di manutenzione la telecamera va sul pezzo (freni, copertoni, catena, batteria, sella, manubrio) e lo fa lampeggiare.
+La bici 3D (`js/bike3d.js`, three.js caricato solo quando serve) compare in home, nella scheda di ogni bici (il "garage") e nella dashboard su computer.
+
+- In home, da ferma, la bici gira su se stessa al posto dello "0"; con Avvia torna la velocità (tocca il numero per il tachimetro analogico). Il pannello dei dati in basso si riduce a una riga con il tasto "Riduci".
+- Modelli: classica, città, MTB, corsa ed elettriche di oggi: e-city (batteria sul portapacchi, motore centrale), e-trekking, e-MTB biammortizzata, e-gravel, e-cargo a coda lunga, e-pieghevole da 20" e e-fat.
+- Si gira trascinando, si avvicina con due dita o la rotellina, il campanello suona al tocco. Toccando una voce di manutenzione la telecamera va sul pezzo (freni, copertoni, catena, batteria e motore, sella, manubrio) e lo fa lampeggiare.
+
+## Profilo
+
+La scheda Profilo raccoglie account (foto e nome di Google, sincronizzazione), statistiche, le preferenze (nome, colore dell'app, voce, annunci, tema sole, peso, obiettivo settimanale), le bici e gli strumenti. Con l'accesso le preferenze ti seguono su ogni telefono.
 
 ## Bici e manutenzione
 
-In Altro → Le tue bici puoi aggiungere più bici e rinominarle toccando il nome in cima alla loro scheda, ognuna con tipo, eventuale motore elettrico, marca, modello, taglia, peso, data di acquisto e km fatti prima di ContaKM. In home scegli con che bici esci: l'uscita resta legata a quella bici e il navigatore usa il suo tipo.
+In Profilo → Le tue bici puoi aggiungere più bici e rinominarle toccando il nome in cima alla loro scheda, ognuna con tipo, eventuale motore elettrico, marca, modello, taglia, peso, data di acquisto e km fatti prima di ContaKM. In home scegli con che bici esci: l'uscita resta legata a quella bici e il navigatore usa il suo tipo.
 
 Ogni bici ha il suo profilo di manutenzione: lubrificazione catena (300 km), sostituzione catena (3.000 km), pastiglie freni (2.000 km), copertoni (4.000 km), tagliando (12 mesi) e, per le elettriche, controllo batteria (6 mesi). Le scadenze si possono cambiare, si possono aggiungere altre voci, e "Fatto" azzera il conteggio salvando la data. A fine uscita compare un avviso se qualcosa è da fare.
 
@@ -50,7 +58,7 @@ Alla prima apertura le uscite già salvate e la manutenzione di prima passano a 
 
 ## Account e copia online (Supabase)
 
-In Altro → Account si accede con Google (gestito da Supabase). Con l'accesso attivo uscite, bici, manutenzione, impostazioni e preferiti vengono copiati online e ritrovati su un altro telefono; senza accesso tutto resta solo sul telefono. Il telefono resta la copia principale e la sincronizzazione parte da sola dopo ogni modifica, quando l'app torna in primo piano e ogni 5 minuti (`js/sync.js`, `js/cloud.js`). Vince la modifica più recente; un'eliminazione passa a tutti i telefoni.
+In Profilo si accede con Google (gestito da Supabase). Con l'accesso attivo uscite, bici, manutenzione, impostazioni e preferiti vengono copiati online e ritrovati su un altro telefono; senza accesso tutto resta solo sul telefono. Il telefono resta la copia principale e la sincronizzazione parte da sola dopo ogni modifica, quando l'app torna in primo piano e ogni 5 minuti (`js/sync.js`, `js/cloud.js`). Vince la modifica più recente; un'eliminazione passa a tutti i telefoni.
 
 - Tabelle, regole di accesso e cancellazione dell'account: `supabase/schema.sql` (da eseguire una volta nel SQL Editor di Supabase).
 - In Supabase → Authentication → URL Configuration servono come Redirect URLs `https://rosariomarra.github.io/ContaKM/**`, `http://localhost:5173/**` e `io.github.rosariomarra.contakm://auth` (ritorno nell'app Android).
@@ -58,7 +66,7 @@ In Altro → Account si accede con Google (gestito da Supabase). Con l'accesso a
 
 ## App Android (Play Store)
 
-La cartella `android/` è l'app nativa fatta con Capacitor: contiene gli stessi file del sito, quindi funziona anche senza internet. Dentro l'app voce, schermo acceso, condivisione e "Apri WeCity" usano le funzioni di Android. Durante un'uscita (o con il navigatore attivo) il GPS continua anche a schermo spento o con WeCity aperta, con la notifica fissa "ContaKM sta registrando l'uscita".
+La cartella `android/` è l'app nativa fatta con Capacitor: contiene gli stessi file del sito, quindi funziona anche senza internet. Dentro l'app voce, schermo acceso e condivisione usano le funzioni di Android. Durante un'uscita (o con il navigatore attivo) il GPS continua anche a schermo spento o con un'altra app aperta, con la notifica fissa "ContaKM sta registrando l'uscita".
 
 Il servizio in primo piano di tipo posizione (`FOREGROUND_SERVICE_LOCATION`) va dichiarato nella Play Console, in Contenuti dell'app, con un breve video che mostra la notifica durante un'uscita.
 
@@ -84,10 +92,6 @@ Serve una volta sola: Node, Java 21 e l'Android SDK (Android Studio lo installa 
    Il file è `android/app/build/outputs/bundle/release/app-release.aab`.
 
 Informativa sulla privacy per la scheda del Play Store: https://rosariomarra.github.io/ContaKM/privacy.html
-
-## WeCity
-
-Il pulsante "Apri WeCity" apre l'app (`it.wecity.app3`) su Android; su iPhone porta all'App Store. Il tasto Start di WeCity va premuto a mano: una app non può toccare i pulsanti di un'altra. L'ordine giusto è prima WeCity, poi Avvia in ContaKM. Il pulsante si nasconde da Altro.
 
 ## Servizi gratuiti usati
 

@@ -57,9 +57,8 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" tools:node="remove" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" tools:node="remove" />
 
-    <!-- Il pulsante "Apri WeCity" deve poter vedere e aprire quell'app -->
+    <!-- Link https aperti nel browser (accesso con Google) -->
     <queries>
-        <package android:name="it.wecity.app3" />
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" />

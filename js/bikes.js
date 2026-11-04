@@ -31,16 +31,28 @@
     { value: '#24282e', label: 'Nero' },
   ];
 
-  /** Telai della bici 3D. Se non è scelto, si deduce dal tipo di bici. */
+  /** Modelli della bici 3D, muscolari ed elettrici. Se non è scelto, si deduce da tipo e motore. */
   const FRAME_STYLES = [
-    { value: 'classic', label: 'Classico' },
-    { value: 'city', label: 'Città' },
-    { value: 'mtb', label: 'MTB' },
-    { value: 'road', label: 'Corsa' },
+    { value: 'classic', label: 'Classica', group: 'Muscolari' },
+    { value: 'city', label: 'Città', group: 'Muscolari' },
+    { value: 'mtb', label: 'MTB', group: 'Muscolari' },
+    { value: 'road', label: 'Corsa', group: 'Muscolari' },
+    { value: 'e-city', label: 'E-City', group: 'Elettriche' },
+    { value: 'e-trekking', label: 'E-Trekking', group: 'Elettriche' },
+    { value: 'e-mtb', label: 'E-MTB full', group: 'Elettriche' },
+    { value: 'e-gravel', label: 'E-Gravel', group: 'Elettriche' },
+    { value: 'e-cargo', label: 'E-Cargo', group: 'Elettriche' },
+    { value: 'e-folding', label: 'E-Pieghevole', group: 'Elettriche' },
+    { value: 'e-fat', label: 'E-Fat', group: 'Elettriche' },
   ];
   const FRAME_FOR_TYPE = { City: 'city', Hybrid: 'classic', Road: 'road', Mountain: 'mtb' };
+  const E_FRAME_FOR_TYPE = { City: 'e-city', Hybrid: 'e-trekking', Road: 'e-gravel', Mountain: 'e-mtb' };
 
-  const frameOf = (bike) => bike?.frame || FRAME_FOR_TYPE[bike?.type] || 'classic';
+  const frameOf = (bike) => bike?.frame
+    || (bike?.electric ? E_FRAME_FOR_TYPE[bike?.type] : FRAME_FOR_TYPE[bike?.type]) || 'classic';
+  const isEFrame = (frame) => typeof frame === 'string' && frame.startsWith('e-');
+  /** Elettrica se segnata così o se ha un modello elettrico. */
+  const isElectric = (bike) => Boolean(bike?.electric) || isEFrame(bike?.frame);
   const colorOf = (bike, fallback = '#38bdf8') => bike?.color || fallback;
 
   /** Su quale pezzo della bici 3D zoomare per una voce di manutenzione. */
@@ -109,7 +121,7 @@
   }
 
   function visibleItems(bike) {
-    return bike.maintenance.filter((i) => !i.electricOnly || bike.electric);
+    return bike.maintenance.filter((i) => !i.electricOnly || isElectric(bike));
   }
 
   /**
@@ -187,6 +199,8 @@
     BIKE_COLORS,
     FRAME_STYLES,
     frameOf,
+    isEFrame,
+    isElectric,
     colorOf,
     partFor,
     createBike,
