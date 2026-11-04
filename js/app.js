@@ -2,7 +2,7 @@
 
 (() => {
   const {
-    Ride, NavSession, arrowAngle, bikes: bikeLib, caloriesFor, fetchRoute, maneuverIcon, native, realGps, searchPlaces, simGps, store, summarize, trackSegments,
+    Ride, NavSession, arrowAngle, bike3d: bike3dLib, bikes: bikeLib, caloriesFor, cloud, startOfWeek, fetchRoute, maneuverIcon, native, realGps, searchPlaces, simGps, store, summarize, trackSegments,
   } = globalThis.ContaKM;
 
   const L = window.L;
@@ -21,8 +21,8 @@
   const WECITY_IOS_URL = 'https://apps.apple.com/it/app/wecity/id655647085';
 
   const ACCENTS = [
-    { value: 'orange', label: 'Arancio' },
     { value: 'blue', label: 'Azzurro' },
+    { value: 'orange', label: 'Arancio' },
     { value: 'green', label: 'Verde' },
     { value: 'pink', label: 'Rosa' },
   ];
@@ -42,6 +42,13 @@
   let ride = new Ride(store.loadCurrent());
   const prefs = store.loadPrefs();
   let bikeList = store.loadBikes();
+
+  // Il colore predefinito è diventato l'azzurro: chi aveva ancora l'arancio di prima passa all'azzurro, una volta sola.
+  if (!prefs.accentV2) {
+    if (prefs.accent === 'orange') prefs.accent = 'blue';
+    prefs.accentV2 = true;
+    store.savePrefs(prefs);
+  }
 
   // Prima apertura con le bici: "La mia bici" prende uscite e manutenzione di prima.
   {
@@ -227,8 +234,43 @@
     }
   }
 
+  let lastSpeedText = '0';
+  let lastKmStep = Math.floor(ride.distanceM / 1000);
+
+  /** Piccolo colpo d'occhio quando cambia la velocità: il numero "pulsa" una volta. */
+  function bump(el) {
+    el.classList.remove('bump');
+    void el.offsetWidth;
+    el.classList.add('bump');
+  }
+
+  /** A ogni km intero: il riquadro dei km si illumina e sale un "+1 km". */
+  function celebrateKm(n) {
+    const tile = $('stat-distance').closest('.stat');
+    bump(tile);
+    const badge = document.createElement('div');
+    badge.className = 'km-badge';
+    badge.textContent = `${n} km`;
+    tile.append(badge);
+    setTimeout(() => badge.remove(), 1600);
+  }
+
+  /** Movimento in home: ruote della bici, linee della strada e alone sui numeri seguono la velocità. */
+  function renderMotion() {
+    const kmhNow = ride.speedMs * 3.6;
+    const riding = ride.state === 'running' && ride.moving;
+    const spin = riding ? Math.min(1.4, Math.max(0.18, 5 / kmhNow)) : 1.6;
+    const root = $('view-ride');
+    root.style.setProperty('--spin', `${spin.toFixed(2)}s`);
+    root.style.setProperty('--road', `${(riding ? Math.min(1.6, Math.max(0.25, 12 / kmhNow)) : 2).toFixed(2)}s`);
+    root.dataset.state = ride.state;
+    root.dataset.moving = riding ? '1' : '';
+  }
+
   function render() {
     const speed = String(Math.round(ride.speedMs * 3.6));
+    if (speed !== lastSpeedText && ride.state === 'running') bump($('speed'));
+    lastSpeedText = speed;
     $('speed').textContent = speed;
     $('map-speed').textContent = speed;
     renderGauge(ride.speedMs * 3.6);
@@ -252,6 +294,11 @@
     // Solo prima di partire: passando a un'altra app il browser sospende il GPS di ContaKM.
     $('btn-wecity').hidden = !prefs.wecity || ride.state !== 'idle';
     renderGps();
+    renderMotion();
+    const kmStep = Math.floor(ride.distanceM / 1000);
+    if (kmStep > lastKmStep && ride.state === 'running') celebrateKm(kmStep);
+    lastKmStep = kmStep;
+    renderDashLive();
   }
 
   // ---------- Tachimetro analogico ----------
@@ -314,10 +361,18 @@
     $('gauge').toggleAttribute('hidden', !analog); // su un svg la proprietà hidden non esiste
   }
 
+  /** Come sul cruscotto di un'auto: all'accensione la lancetta va a fondo scala e torna. */
+  function sweepGauge() {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    renderGauge(GAUGE_MAX_KMH);
+    setTimeout(() => renderGauge(ride.speedMs * 3.6), 450);
+  }
+
   function toggleSpeedStyle() {
     prefs.speedStyle = prefs.speedStyle === 'analog' ? 'digital' : 'analog';
     savePrefs();
     applySpeedStyle();
+    if (prefs.speedStyle === 'analog') sweepGauge();
   }
 
   /** Km totali in home: uscite salvate più quella in corso, così crescono mentre pedali. */
@@ -344,6 +399,7 @@
     $('btn-sun').setAttribute('aria-pressed', prefs.sun);
     $('btn-voice').setAttribute('aria-pressed', prefs.voice);
     $('btn-voice').querySelector('use').setAttribute('href', prefs.voice ? '#i-voice' : '#i-voice-off');
+    paintBike3d();
   }
 
   // ---------- Blocco tocchi ----------
@@ -768,6 +824,7 @@
     $('record-avg').textContent = kmh(s.bestAvgMs);
     $('record-top').textContent = kmh(s.topSpeedMs);
 
+    renderDash();
     $('history-empty').hidden = s.rides > 0;
     $('history').replaceChildren(
       ...history.map((r) => {
@@ -799,6 +856,7 @@
   function openDetail(r, title) {
     detailRide = r;
     $('detail-title').textContent = title;
+    $('detail').dataset.saved = title === 'Uscita salvata' ? '1' : '';
     const avgMs = r.movingMs > 0 ? r.distanceM / (r.movingMs / 1000) : 0;
     $('detail-stats').replaceChildren(
       statTile(km(r.distanceM), 'km'),
@@ -825,7 +883,26 @@
       detailMap.fitBounds(line.getBounds(), { padding: [20, 20], animate: false });
       createTiles(detailMap);
       line.addTo(detailMap);
+      drawRoute(line);
     }
+  }
+
+  /** Il percorso si "disegna" da partenza ad arrivo, come se lo si stesse rifacendo. */
+  function drawRoute(line) {
+    const path = line.getElement?.();
+    if (!path?.getTotalLength || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const len = path.getTotalLength();
+    path.style.strokeDasharray = `${len}`;
+    path.style.strokeDashoffset = `${len}`;
+    path.getBoundingClientRect();
+    path.style.transition = 'stroke-dashoffset 1.6s cubic-bezier(.45,.05,.25,1)';
+    path.style.strokeDashoffset = '0';
+    // Dopo il disegno si tolgono i trattini: con lo zoom la lunghezza della linea cambia.
+    setTimeout(() => {
+      path.style.transition = '';
+      path.style.strokeDasharray = '';
+      path.style.strokeDashoffset = '';
+    }, 1700);
   }
 
   function closeDetail() {
@@ -1005,6 +1082,131 @@ ${segments}
     renderBikePick();
     renderBikeList();
     if ($('bike').open) renderBikeSheet();
+    renderDash();
+  }
+
+  // ---------- Dashboard desktop ----------
+
+  const desktop = matchMedia('(min-width: 1100px) and (min-height: 640px)');
+  let bike3d = null;
+  let dashMounted = false;
+
+  function paintBike3d() {
+    if (!bike3d) return;
+    bike3d.setColor(getComputedStyle(document.documentElement).getPropertyValue('--accent'));
+    bike3d.setElectric(activeBike()?.electric);
+  }
+
+  function setupDash() {
+    $('dash').hidden = !desktop.matches;
+    if (!desktop.matches) return;
+    if (!dashMounted) {
+      dashMounted = true;
+      bike3dLib.mount($('dash-3d'))
+        .then((view) => {
+          bike3d = view;
+          paintBike3d();
+        })
+        .catch(() => $('dash-3d').classList.add('no-3d'));
+    }
+    renderDash();
+  }
+
+  function renderDashLive() {
+    if ($('dash').hidden) return;
+    $('dash-speed').textContent = String(Math.round(ride.speedMs * 3.6));
+    $('dash-state').textContent = ride.state === 'paused' ? 'In pausa'
+      : ride.state === 'running' ? (ride.moving ? 'In uscita' : 'Fermo al semaforo?') : 'Pronta a partire';
+    $('dash-state').dataset.state = ride.state;
+    $('dash-ride-km').textContent = km(ride.distanceM);
+    $('dash-ride-time').textContent = duration(ride.movingMs);
+    $('dash-ride-avg').textContent = kmh(ride.avgSpeedMs);
+    bike3d?.setSpeed(ride.state === 'running' ? ride.speedMs : 0);
+  }
+
+  /** Barre dei km degli ultimi 7 giorni (tutte le bici), con il valore al passaggio del mouse. */
+  function weekChart(history) {
+    const day = new Date();
+    day.setHours(0, 0, 0, 0);
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const start = new Date(day);
+      start.setDate(day.getDate() - (6 - i));
+      const end = new Date(start);
+      end.setDate(start.getDate() + 1);
+      const m = history.filter((r) => r.startedAt >= start && r.startedAt < end).reduce((t, r) => t + r.distanceM, 0);
+      return { start, km: m / 1000 };
+    });
+    const max = Math.max(1, ...days.map((d) => d.km));
+    const W = 280;
+    const H = 120;
+    const base = 100;
+    const slot = W / 7;
+    const bw = 18;
+    const top = Math.max(...days.map((d) => d.km));
+    const parts = days.map((d, i) => {
+      const h = d.km > 0 ? Math.max(4, (d.km / max) * 80) : 0;
+      const x = i * slot + (slot - bw) / 2;
+      const y = base - h;
+      const r = Math.min(4, h);
+      const bar = h ? `<path class="wk-bar${i === 6 ? ' today' : ''}" d="M${x} ${base}V${y + r}Q${x} ${y} ${x + r} ${y}H${x + bw - r}Q${x + bw} ${y} ${x + bw} ${y + r}V${base}Z"/>` : '';
+      const showValue = d.km > 0 && (i === 6 || d.km === top);
+      const value = showValue ? `<text class="wk-value" x="${x + bw / 2}" y="${y - 6}">${number(d.km, 1)}</text>` : '';
+      const label = d.start.toLocaleDateString('it-IT', { weekday: 'narrow' }).toUpperCase();
+      const tip = `${d.start.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'short' })}: ${number(d.km, 1)} km`;
+      return `<g class="wk-day" data-tip="${tip}"><rect class="wk-hit" x="${i * slot}" y="0" width="${slot}" height="${H}"/>${bar}${value}<text class="wk-label${i === 6 ? ' today' : ''}" x="${x + bw / 2}" y="${base + 16}">${label}</text></g>`;
+    });
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Km degli ultimi 7 giorni"><line class="wk-base" x1="0" x2="${W}" y1="${base}" y2="${base}"/>${parts.join('')}</svg><div class="wk-tip" hidden></div>`;
+  }
+
+  function renderDash() {
+    if (!desktop.matches || $('dash').hidden) return;
+    const history = store.loadHistory();
+    const b = activeBike();
+    const all = summarize(history);
+    const kmBike = bikeLib.bikeKm(b, history, bikeList);
+    $('dash-bike').textContent = b.name;
+    $('dash-bike-sub').textContent = [b.brand, b.model].filter(Boolean).join(' ') || bikeSub(b, history).split(' · ')[0];
+    $('dash-week-km').textContent = number(all.weekM / 1000, 1);
+    $('dash-month-km').textContent = number(all.monthM / 1000, 1);
+    $('dash-bike-km').textContent = number(kmBike, 0);
+
+    const chart = $('dash-week');
+    chart.innerHTML = weekChart(history);
+    const tip = chart.querySelector('.wk-tip');
+    chart.querySelectorAll('.wk-day').forEach((g) => {
+      g.addEventListener('pointerenter', () => {
+        tip.textContent = g.dataset.tip;
+        tip.hidden = false;
+        const box = g.getBoundingClientRect();
+        const host = chart.getBoundingClientRect();
+        tip.style.left = `${box.left - host.left + box.width / 2}px`;
+      });
+      g.addEventListener('pointerleave', () => { tip.hidden = true; });
+    });
+
+    const items = bikeLib.visibleItems(b)
+      .map((item) => ({ item, st: bikeLib.itemStatus(item, kmBike) }))
+      .sort((x, y) => y.st.ratio - x.st.ratio)
+      .slice(0, 4);
+    $('dash-maint').replaceChildren(...items.map(({ item, st }) => {
+      const li = document.createElement('li');
+      li.dataset.due = st.due ? '1' : '';
+      const head = document.createElement('div');
+      head.className = 'maint-head';
+      head.append(textBlock('maint-label', item.label), textBlock('maint-left', maintLeftText(st)));
+      const bar = document.createElement('div');
+      bar.className = 'bar';
+      const fill = document.createElement('div');
+      fill.className = 'bar-fill';
+      fill.style.width = `${Math.min(100, st.ratio * 100)}%`;
+      fill.dataset.due = st.due ? '1' : '';
+      bar.append(fill);
+      li.append(head, bar);
+      li.addEventListener('click', () => openBike(b.id));
+      return li;
+    }));
+    paintBike3d();
+    renderDashLive();
   }
 
   function bikeSub(b, history) {
@@ -1062,12 +1264,11 @@ ${segments}
     bikeList.push(b);
     saveBikes();
     openBike(b.id);
-    const name = $('bike-form').querySelector('[name="name"]');
-    name.focus();
-    name.select();
+    startRename(); // bici nuova: si parte scrivendo il nome
   }
 
   function openBike(id) {
+    endRename(false);
     editingBikeId = id;
     fillBikeForm();
     renderBikeSheet();
@@ -1257,7 +1458,43 @@ ${segments}
     saveBikes();
   }
 
+  /** Rinomina dal titolo della scheda: tocchi il nome, scrivi, Invio o tocchi fuori. */
+  function startRename() {
+    const input = $('bike-title-input');
+    input.value = findBike(editingBikeId).name;
+    $('bike-title-btn').hidden = true;
+    input.hidden = false;
+    input.focus();
+    input.select();
+  }
+
+  function endRename(save) {
+    const input = $('bike-title-input');
+    if (input.hidden) return;
+    const name = input.value.trim();
+    input.hidden = true;
+    $('bike-title-btn').hidden = false;
+    const b = findBike(editingBikeId);
+    if (save && name && name !== b.name) {
+      b.name = name;
+      $('bike-form').querySelector('[name="name"]').value = name;
+      saveBikes();
+      toast(`Rinominata: ${name}`);
+    }
+  }
+
   function setupBikes() {
+    $('btn-dash-bike').addEventListener('click', openPicker);
+    desktop.addEventListener('change', setupDash);
+    $('bike-title-btn').addEventListener('click', startRename);
+    $('bike-title-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') endRename(true);
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        endRename(false);
+      }
+    });
+    $('bike-title-input').addEventListener('blur', () => endRename(true));
     $('btn-bike-pick').addEventListener('click', openPicker);
     $('btn-picker-close').addEventListener('click', () => $('bike-picker').close());
     $('btn-picker-manage').addEventListener('click', () => {
@@ -1392,9 +1629,23 @@ ${segments}
   if (!findBike(prefs.activeBikeId)) prefs.activeBikeId = bikeList[0].id;
   buildGauge();
   applySpeedStyle();
+  if (prefs.speedStyle === 'analog') setTimeout(sweepGauge, 300);
   setupBikes();
   renderBikePick();
+  setupDash();
   bindEvents();
+  // Dati arrivati da un altro telefono: si ridisegna tutto quello che li mostra.
+  cloud.init({
+    toast,
+    onPulled() {
+      bikeList = store.loadBikes();
+      Object.assign(prefs, store.loadPrefs());
+      if (!findBike(prefs.activeBikeId)) prefs.activeBikeId = bikeList[0]?.id;
+      applyPrefs();
+      renderHistory();
+      renderBikes();
+    },
+  });
   setupMic();
   setupLock();
   setupSettings();

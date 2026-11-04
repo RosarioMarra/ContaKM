@@ -32,13 +32,25 @@ Finché la bici è in movimento lo schermo resta acceso e l'app deve restare in 
 
 Il numero di satelliti non è disponibile nei browser: l'app mostra la precisione GPS in metri, che è il dato reale fornito dal telefono.
 
+## Su computer
+
+Con una finestra larga (almeno 1100 × 640) l'app diventa compatta a sinistra e a destra compare la dashboard: bici 3D (three.js, caricata solo qui) che si ruota trascinando e le cui ruote girano alla velocità vera, dati dell'uscita in corso, km di settimana e mese, km degli ultimi 7 giorni e manutenzione più vicina.
+
 ## Bici e manutenzione
 
-In Altro → Le tue bici puoi aggiungere più bici, ognuna con tipo, eventuale motore elettrico, marca, modello, taglia, peso, data di acquisto e km fatti prima di ContaKM. In home scegli con che bici esci: l'uscita resta legata a quella bici e il navigatore usa il suo tipo.
+In Altro → Le tue bici puoi aggiungere più bici e rinominarle toccando il nome in cima alla loro scheda, ognuna con tipo, eventuale motore elettrico, marca, modello, taglia, peso, data di acquisto e km fatti prima di ContaKM. In home scegli con che bici esci: l'uscita resta legata a quella bici e il navigatore usa il suo tipo.
 
 Ogni bici ha il suo profilo di manutenzione: lubrificazione catena (300 km), sostituzione catena (3.000 km), pastiglie freni (2.000 km), copertoni (4.000 km), tagliando (12 mesi) e, per le elettriche, controllo batteria (6 mesi). Le scadenze si possono cambiare, si possono aggiungere altre voci, e "Fatto" azzera il conteggio salvando la data. A fine uscita compare un avviso se qualcosa è da fare.
 
 Alla prima apertura le uscite già salvate e la manutenzione di prima passano a "La mia bici". Le bici sono comprese nel backup.
+
+## Account e copia online (Supabase)
+
+In Altro → Account si accede con Google (gestito da Supabase). Con l'accesso attivo uscite, bici, manutenzione, impostazioni e preferiti vengono copiati online e ritrovati su un altro telefono; senza accesso tutto resta solo sul telefono. Il telefono resta la copia principale e la sincronizzazione parte da sola dopo ogni modifica, quando l'app torna in primo piano e ogni 5 minuti (`js/sync.js`, `js/cloud.js`). Vince la modifica più recente; un'eliminazione passa a tutti i telefoni.
+
+- Tabelle, regole di accesso e cancellazione dell'account: `supabase/schema.sql` (da eseguire una volta nel SQL Editor di Supabase).
+- In Supabase → Authentication → URL Configuration servono come Redirect URLs `https://rosariomarra.github.io/ContaKM/**`, `http://localhost:5173/**` e `io.github.rosariomarra.contakm://auth` (ritorno nell'app Android).
+- Pagina per la cancellazione dell'account richiesta dal Play Store: https://rosariomarra.github.io/ContaKM/elimina-account.html
 
 ## App Android (Play Store)
 
