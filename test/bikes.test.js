@@ -93,3 +93,25 @@ test('km iniziali cambiati dopo: la manutenzione mai fatta si sposta, quella fat
   assert.equal(b.startKm, 2500);
   assert.equal(bikes.dueItems(b, [], [b], NOW).map((i) => i.key).join(), 'brakes', 'solo la voce segnata a 0 km');
 });
+
+test('telaio e colore: scelti o dedotti dal tipo', () => {
+  const b = bikes.createBike({ type: 'Mountain' }, NOW);
+  assert.equal(bikes.frameOf(b), 'mtb');
+  assert.equal(bikes.frameOf({ ...b, frame: 'city' }), 'city');
+  assert.equal(bikes.colorOf(b, '#123456'), '#123456');
+  assert.equal(bikes.colorOf({ ...b, color: '#e5484d' }), '#e5484d');
+});
+
+test('ogni voce di manutenzione sa su quale pezzo zoomare', () => {
+  const b = bikes.createBike({ electric: true }, NOW);
+  const part = (key) => bikes.partFor(b.maintenance.find((i) => i.key === key));
+  assert.equal(part('chain-lube'), 'chain');
+  assert.equal(part('brakes'), 'brakes');
+  assert.equal(part('tyres'), 'tyres');
+  assert.equal(part('battery'), 'battery');
+  assert.equal(part('service'), 'all');
+  assert.equal(bikes.partFor({ label: 'Regolazione cambio' }), 'chain');
+  assert.equal(bikes.partFor({ label: 'Spurgo freni idraulici' }), 'brakes');
+  assert.equal(bikes.partFor({ label: 'Cambio sella' }), 'saddle');
+  assert.equal(bikes.partFor({ label: 'Lavaggio' }), 'all');
+});

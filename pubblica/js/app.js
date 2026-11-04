@@ -267,6 +267,8 @@
     root.style.setProperty('--road', `${(riding ? Math.min(1.6, Math.max(0.25, 12 / kmhNow)) : 2).toFixed(2)}s`);
     root.dataset.state = ride.state;
     root.dataset.moving = riding ? '1' : '';
+    // Da ferma, al posto dello "0" c'è la bici 3D; con Avvia torna la velocità.
+    $('speed-box').dataset.bike = homeBike && ride.state === 'idle' && !desktop.matches ? '1' : '';
   }
 
   function render() {
@@ -1114,7 +1116,125 @@ ${segments}
     renderBikePick();
     renderBikeList();
     if ($('bike').open) renderBikeSheet();
+    applyLook(homeBike, activeBike());
     renderDash();
+  }
+
+  // ---------- Bici 3D: home, garage della scheda, dashboard ----------
+
+  let homeBike = null;
+  let garage = null;
+  let garageLoading = null;
+  const accentColor = () => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#38bdf8';
+
+  /** Telaio, colore e batteria della bici 3D come quelli della bici salvata. */
+  function applyLook(view, b) {
+    if (!view || !b) return;
+    view.setStyle(bikeLib.frameOf(b));
+    view.setColor(bikeLib.colorOf(b, accentColor()));
+    view.setElectric(b.electric);
+  }
+
+  function ensureGarage() {
+    garageLoading ??= bike3dLib.mount($('garage-3d'), {
+      onTap: (what) => { if (what === 'bell') $('garage-caption').textContent = 'Drin drin!'; },
+    }).then((view) => {
+      garage = view;
+      return view;
+    }).catch((err) => {
+      $('garage-3d').classList.add('no-3d');
+      throw err;
+    });
+    return garageLoading;
+  }
+
+  function resetGarageCaption() {
+    $('garage-caption').textContent = 'Trascina per girarla · due dita per lo zoom · tocca il campanello';
+    $('garage-reset').hidden = true;
+  }
+
+  /** Tocchi una voce di manutenzione: la telecamera va sul pezzo e lo fa lampeggiare. */
+  function focusMaint(item, st) {
+    ensureGarage().then((view) => view.focus(bikeLib.partFor(item))).catch(() => {});
+    $('garage-caption').textContent = `${item.label} · ${maintLeftText(st)}`;
+    $('garage-reset').hidden = false;
+    $('bike').scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
+
+  function paintLookPickers(b) {
+    const frame = bikeLib.frameOf(b);
+    $('bike-frame').querySelectorAll('button').forEach((btn) => {
+      btn.setAttribute('aria-pressed', btn.dataset.value === frame);
+    });
+    const color = bikeLib.colorOf(b, accentColor()).toLowerCase();
+    let preset = false;
+    $('bike-colors').querySelectorAll('.swatch[data-value]').forEach((btn) => {
+      const on = btn.dataset.value === color;
+      preset ||= on;
+      btn.setAttribute('aria-pressed', on);
+    });
+    const custom = $('bike-colors').querySelector('.swatch-custom');
+    custom.setAttribute('aria-pressed', !preset && Boolean(b.color));
+    custom.querySelector('input').value = /^#[0-9a-f]{6}$/i.test(color) ? color : '#38bdf8';
+  }
+
+  function setupLookPickers() {
+    $('bike-frame').replaceChildren(...bikeLib.FRAME_STYLES.map((f) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = f.label;
+      btn.dataset.value = f.value;
+      btn.addEventListener('click', () => {
+        const b = findBike(editingBikeId);
+        b.frame = f.value;
+        saveBikes();
+        applyLook(garage, b);
+        garage?.reset();
+        resetGarageCaption();
+      });
+      return btn;
+    }));
+    const swatches = bikeLib.BIKE_COLORS.map((c) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'swatch';
+      btn.dataset.value = c.value;
+      btn.style.setProperty('--paint', c.value);
+      btn.setAttribute('aria-label', c.label);
+      btn.title = c.label;
+      btn.addEventListener('click', () => setBikeColor(c.value));
+      return btn;
+    });
+    const custom = document.createElement('label');
+    custom.className = 'swatch swatch-custom';
+    custom.title = 'Colore a scelta';
+    custom.innerHTML = '<input type="color" aria-label="Colore a scelta">';
+    const input = custom.querySelector('input');
+    input.addEventListener('input', () => garage?.setColor(input.value));
+    input.addEventListener('change', () => setBikeColor(input.value));
+    $('bike-colors').replaceChildren(...swatches, custom);
+  }
+
+  function setBikeColor(value) {
+    const b = findBike(editingBikeId);
+    b.color = value.toLowerCase();
+    saveBikes();
+    applyLook(garage, b);
+    garage?.celebrate();
+  }
+
+  /** In home la bici 3D si carica con calma dopo l'avvio, così l'app parte subito. */
+  function setupHomeBike() {
+    if (desktop.matches) return;
+    const start = () => bike3dLib.mount($('home-bike'), { zoomable: false, closer: 0.8 })
+      .then((view) => {
+        homeBike = view;
+        applyLook(view, activeBike());
+        renderMotion();
+      })
+      .catch(() => {});
+    if ('requestIdleCallback' in window) requestIdleCallback(start, { timeout: 2500 });
+    else setTimeout(start, 800);
   }
 
   // ---------- Dashboard desktop ----------
@@ -1124,9 +1244,8 @@ ${segments}
   let dashMounted = false;
 
   function paintBike3d() {
-    if (!bike3d) return;
-    bike3d.setColor(getComputedStyle(document.documentElement).getPropertyValue('--accent'));
-    bike3d.setElectric(activeBike()?.electric);
+    applyLook(bike3d, activeBike());
+    applyLook(homeBike, activeBike());
   }
 
   function setupDash() {
@@ -1234,7 +1353,11 @@ ${segments}
       fill.dataset.due = st.due ? '1' : '';
       bar.append(fill);
       li.append(head, bar);
-      li.addEventListener('click', () => openBike(b.id));
+      li.title = 'Mostra il pezzo sulla bici';
+      li.addEventListener('click', () => {
+        bike3d?.focus(bikeLib.partFor(item));
+        $('dash-hint').textContent = `${item.label} · ${maintLeftText(st)} — doppio clic sulla bici per la vista intera`;
+      });
       return li;
     }));
     paintBike3d();
@@ -1257,8 +1380,12 @@ ${segments}
     const btn = document.createElement('button');
     btn.className = 'row';
     btn.setAttribute('aria-current', b.id === activeBike().id);
-    const title = b.id === activeBike().id ? `${b.name} · in uso` : b.name;
-    btn.append(textBlock('row-title', title), textBlock('row-sub', bikeSub(b, history)));
+    const title = textBlock('row-title', b.id === activeBike().id ? `${b.name} · in uso` : b.name);
+    const dot = document.createElement('span');
+    dot.className = 'paint-dot';
+    dot.style.background = bikeLib.colorOf(b, accentColor());
+    title.prepend(dot);
+    btn.append(title, textBlock('row-sub', bikeSub(b, history)));
     const due = bikeLib.dueItems(b, history, bikeList).length;
     if (due) btn.append(textBlock('row-sub row-due', due === 1 ? '1 manutenzione da fare' : `${due} manutenzioni da fare`));
     btn.addEventListener('click', onClick);
@@ -1306,6 +1433,11 @@ ${segments}
     renderBikeSheet();
     $('bike').showModal();
     $('bike').scrollTop = 0;
+    resetGarageCaption();
+    ensureGarage().then((view) => {
+      applyLook(view, findBike(editingBikeId));
+      view.reset();
+    }).catch(() => {});
   }
 
   function fillBikeForm() {
@@ -1348,7 +1480,15 @@ ${segments}
 
     const head = document.createElement('div');
     head.className = 'maint-head';
-    head.append(textBlock('maint-label', item.label), textBlock('maint-left', maintLeftText(st)));
+    const label = textBlock('maint-label', item.label);
+    const eye = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    eye.setAttribute('class', 'maint-eye');
+    eye.innerHTML = '<use href="#i-target"/>';
+    label.append(eye);
+    head.append(label, textBlock('maint-left', maintLeftText(st)));
+    li.addEventListener('click', (e) => {
+      if (!e.target.closest('button')) focusMaint(item, st);
+    });
 
     const bar = document.createElement('div');
     bar.className = 'bar';
@@ -1380,6 +1520,8 @@ ${segments}
       bikeLib.markDone(item, kmNow);
       saveBikes();
       toast(`${item.label}: segnata`);
+      garage?.focus(bikeLib.partFor(item));
+      garage?.celebrate();
     });
     actions.append(edit, done);
 
@@ -1406,6 +1548,7 @@ ${segments}
       statTile(kmh(s.topSpeedMs), 'km/h max'),
     );
     $('bike-maint').replaceChildren(...bikeLib.visibleItems(b).map((item) => maintRow(b, item, kmNow)));
+    paintLookPickers(b);
     const del = $('btn-bike-delete');
     del.hidden = bikeList.length < 2;
     del.dataset.armed = '';
@@ -1516,6 +1659,11 @@ ${segments}
   }
 
   function setupBikes() {
+    setupLookPickers();
+    $('garage-reset').addEventListener('click', () => {
+      garage?.reset();
+      resetGarageCaption();
+    });
     $('btn-dash-bike').addEventListener('click', openPicker);
     desktop.addEventListener('change', setupDash);
     $('bike-title-btn').addEventListener('click', startRename);
@@ -1671,6 +1819,7 @@ ${segments}
   setupBikes();
   renderBikePick();
   setupDash();
+  setupHomeBike();
   headingLib.startCompass((value) => {
     compass = value;
     paintRider();
