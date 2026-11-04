@@ -36,6 +36,10 @@ Il numero di satelliti non è disponibile nei browser: l'app mostra la precision
 
 Con una finestra larga (almeno 1100 × 640) l'app diventa compatta a sinistra e a destra compare la dashboard: bici 3D (three.js, caricata solo qui) che si ruota trascinando e le cui ruote girano alla velocità vera, dati dell'uscita in corso, km di settimana e mese, km degli ultimi 7 giorni e manutenzione più vicina.
 
+## Bici 3D
+
+La bici 3D (`js/bike3d.js`, three.js caricato solo quando serve) compare in home quando sei ferma, nella scheda di ogni bici (il "garage") e nella dashboard su computer. Si gira trascinando, si avvicina con due dita o la rotellina, il campanello suona al tocco e un tocco sulla bici fa girare le ruote. Nella scheda si scelgono telaio (classico, città, MTB, corsa) e colore; toccando una voce di manutenzione la telecamera va sul pezzo (freni, copertoni, catena, batteria, sella, manubrio) e lo fa lampeggiare.
+
 ## Bici e manutenzione
 
 In Altro → Le tue bici puoi aggiungere più bici e rinominarle toccando il nome in cima alla loro scheda, ognuna con tipo, eventuale motore elettrico, marca, modello, taglia, peso, data di acquisto e km fatti prima di ContaKM. In home scegli con che bici esci: l'uscita resta legata a quella bici e il navigatore usa il suo tipo.
