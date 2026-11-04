@@ -32,6 +32,14 @@ Finché la bici è in movimento lo schermo resta acceso e l'app deve restare in 
 
 Il numero di satelliti non è disponibile nei browser: l'app mostra la precisione GPS in metri, che è il dato reale fornito dal telefono.
 
+## Bici e manutenzione
+
+In Altro → Le tue bici puoi aggiungere più bici, ognuna con tipo, eventuale motore elettrico, marca, modello, taglia, peso, data di acquisto e km fatti prima di ContaKM. In home scegli con che bici esci: l'uscita resta legata a quella bici e il navigatore usa il suo tipo.
+
+Ogni bici ha il suo profilo di manutenzione: lubrificazione catena (300 km), sostituzione catena (3.000 km), pastiglie freni (2.000 km), copertoni (4.000 km), tagliando (12 mesi) e, per le elettriche, controllo batteria (6 mesi). Le scadenze si possono cambiare, si possono aggiungere altre voci, e "Fatto" azzera il conteggio salvando la data. A fine uscita compare un avviso se qualcosa è da fare.
+
+Alla prima apertura le uscite già salvate e la manutenzione di prima passano a "La mia bici". Le bici sono comprese nel backup.
+
 ## App Android (Play Store)
 
 La cartella `android/` è l'app nativa fatta con Capacitor: contiene gli stessi file del sito, quindi funziona anche senza internet. Dentro l'app voce, schermo acceso, condivisione e "Apri WeCity" usano le funzioni di Android. Durante un'uscita (o con il navigatore attivo) il GPS continua anche a schermo spento o con WeCity aperta, con la notifica fissa "ContaKM sta registrando l'uscita".

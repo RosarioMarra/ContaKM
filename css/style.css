@@ -304,6 +304,55 @@ h2 { font-size: 20px; font-weight: 800; margin: 18px 0 8px; }
 .detail-actions { display: flex; gap: 8px; flex: none; }
 .detail-actions .btn { font-size: 22px; min-height: 64px; }
 
+/* Bici */
+.bike-pick {
+  display: flex; align-items: center; gap: 8px; align-self: flex-start; max-width: 100%; flex: none;
+  min-height: 44px; padding: 0 12px; font-size: 18px; font-weight: 700;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 22px;
+}
+.bike-pick svg { font-size: 22px; flex: none; color: var(--accent); }
+.bike-pick .chev { font-size: 18px; color: var(--muted); }
+.bike-pick-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.bike-pick-due { flex: none; font-size: 13px; font-weight: 800; padding: 2px 8px; border-radius: 10px; background: var(--danger); color: #fff; }
+.bike-pick[aria-disabled="true"] .chev { display: none; }
+.bike-filter { margin-bottom: 12px; grid-auto-columns: minmax(0, 1fr); }
+.bike-filter button { min-height: 44px; font-size: 16px; padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.add-btn { margin-top: 8px; }
+.row[aria-current="true"] { border: 2px solid var(--accent); }
+.row-due { color: var(--danger); font-weight: 700; }
+.in-use { margin: 0; text-align: center; font-size: 18px; font-weight: 700; color: var(--accent); }
+.sheet > .btn, .sheet > .history, .sheet > .maint, .sheet > .stats, .sheet > .form { flex: none; }
+.sheet h3 { font-size: 21px; font-weight: 800; margin: 8px 0 0; }
+
+.maint { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.maint-item { padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; display: grid; gap: 8px; }
+.maint-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.maint-label { font-size: 19px; font-weight: 800; min-width: 0; }
+.maint-left { flex: none; font-size: 16px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.maint-item[data-due="1"] .maint-left { color: var(--danger); }
+.maint-item .bar { background: var(--bg); }
+.maint-last { font-size: 15px; color: var(--muted); }
+.maint-actions { display: flex; gap: 8px; }
+.maint-actions .btn { flex: 1; min-height: 48px; padding: 8px 10px; font-size: 17px; }
+
+.form { display: grid; gap: 10px; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field > span { font-size: 16px; font-weight: 600; color: var(--muted); }
+.field input, .field select {
+  width: 100%; min-width: 0; height: 52px; padding: 0 12px;
+  font: inherit; font-size: 19px; font-weight: 600; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; outline: none;
+  user-select: text; -webkit-user-select: text;
+}
+.field input:focus, .field select:focus { border-color: var(--accent); }
+.field input::placeholder { color: var(--muted); font-weight: 500; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.field-inline { grid-template-columns: auto 1fr; align-items: center; gap: 12px; flex: none; }
+.field-inline > span { font-size: 18px; color: var(--ink); }
+.form .toggle { margin: 0; }
+.sheet-small { height: auto; max-height: 100dvh; margin-top: auto; border-radius: 18px 18px 0 0; }
+.sheet::backdrop { background: rgb(0 0 0 / .5); }
+
 .toast {
   position: fixed; z-index: 2000; left: 16px; right: 16px; top: calc(var(--safe-top) + 90px);
   padding: 14px 16px; text-align: center; font-size: 20px; font-weight: 700;
@@ -324,6 +373,7 @@ h2 { font-size: 20px; font-weight: 800; margin: 18px 0 8px; }
   .speed { grid-row: 2 / 5; }
   .speed-value { font-size: min(24vw, 46dvh); }
   .stats-small { display: none; }
+  .bike-pick { display: none; }
   .tabs { position: fixed; left: 0; top: 0; bottom: 0; width: 76px; grid-template-columns: 1fr; border-top: 0; border-right: 1px solid var(--line); padding-bottom: 0; }
   #app { padding-left: 76px; }
   .tab { height: auto; font-size: 12px; }
