@@ -40,6 +40,14 @@ Ogni bici ha il suo profilo di manutenzione: lubrificazione catena (300 km), sos
 
 Alla prima apertura le uscite già salvate e la manutenzione di prima passano a "La mia bici". Le bici sono comprese nel backup.
 
+## Account e copia online (Supabase)
+
+In Altro → Account si accede con Google (gestito da Supabase). Con l'accesso attivo uscite, bici, manutenzione, impostazioni e preferiti vengono copiati online e ritrovati su un altro telefono; senza accesso tutto resta solo sul telefono. Il telefono resta la copia principale e la sincronizzazione parte da sola dopo ogni modifica, quando l'app torna in primo piano e ogni 5 minuti (`js/sync.js`, `js/cloud.js`). Vince la modifica più recente; un'eliminazione passa a tutti i telefoni.
+
+- Tabelle, regole di accesso e cancellazione dell'account: `supabase/schema.sql` (da eseguire una volta nel SQL Editor di Supabase).
+- In Supabase → Authentication → URL Configuration servono come Redirect URLs `https://rosariomarra.github.io/ContaKM/**`, `http://localhost:5173/**` e `io.github.rosariomarra.contakm://auth` (ritorno nell'app Android).
+- Pagina per la cancellazione dell'account richiesta dal Play Store: https://rosariomarra.github.io/ContaKM/elimina-account.html
+
 ## App Android (Play Store)
 
 La cartella `android/` è l'app nativa fatta con Capacitor: contiene gli stessi file del sito, quindi funziona anche senza internet. Dentro l'app voce, schermo acceso, condivisione e "Apri WeCity" usano le funzioni di Android. Durante un'uscita (o con il navigatore attivo) il GPS continua anche a schermo spento o con WeCity aperta, con la notifica fissa "ContaKM sta registrando l'uscita".

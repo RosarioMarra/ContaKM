@@ -14,6 +14,8 @@
   const Share = plugin('Share');
   const BackgroundGeolocation = plugin('BackgroundGeolocation');
   const LocalNotifications = plugin('LocalNotifications');
+  const Browser = plugin('Browser');
+  const App = plugin('App');
 
   // Un solo watcher alla volta: in uscita con la notifica (GPS anche a schermo spento), altrimenti senza.
   let gpsCallbacks = null;
@@ -91,6 +93,21 @@
     backgroundTracking(on) {
       if (on) LocalNotifications.requestPermissions().catch(() => {}); // Android 13+: serve per mostrare la notifica
       return restartWatcher(on);
+    },
+
+    /** Accesso con Google: la pagina si apre nel browser del telefono (Google non la permette dentro l'app). */
+    openBrowser(url) {
+      return Browser.open({ url, presentationStyle: 'popover' });
+    },
+
+    closeBrowser() {
+      return Browser.close().catch(() => {});
+    },
+
+    /** Chiamata quando l'app viene aperta da un link io.github.rosariomarra.contakm://… (anche ad app chiusa). */
+    onAppUrl(fn) {
+      App.addListener('appUrlOpen', (e) => fn(e.url)).catch(() => {});
+      App.getLaunchUrl().then((r) => r?.url && fn(r.url)).catch(() => {});
     },
 
     openSettings() {

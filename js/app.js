@@ -2,7 +2,7 @@
 
 (() => {
   const {
-    Ride, NavSession, arrowAngle, bikes: bikeLib, caloriesFor, fetchRoute, maneuverIcon, native, realGps, searchPlaces, simGps, store, summarize, trackSegments,
+    Ride, NavSession, arrowAngle, bikes: bikeLib, caloriesFor, cloud, fetchRoute, maneuverIcon, native, realGps, searchPlaces, simGps, store, summarize, trackSegments,
   } = globalThis.ContaKM;
 
   const L = window.L;
@@ -1395,6 +1395,18 @@ ${segments}
   setupBikes();
   renderBikePick();
   bindEvents();
+  // Dati arrivati da un altro telefono: si ridisegna tutto quello che li mostra.
+  cloud.init({
+    toast,
+    onPulled() {
+      bikeList = store.loadBikes();
+      Object.assign(prefs, store.loadPrefs());
+      if (!findBike(prefs.activeBikeId)) prefs.activeBikeId = bikeList[0]?.id;
+      applyPrefs();
+      renderHistory();
+      renderBikes();
+    },
+  });
   setupMic();
   setupLock();
   setupSettings();

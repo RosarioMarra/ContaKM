@@ -335,6 +335,7 @@ h2 { font-size: 20px; font-weight: 800; margin: 18px 0 8px; }
 .maint-actions { display: flex; gap: 8px; }
 .maint-actions .btn { flex: 1; min-height: 48px; padding: 8px 10px; font-size: 17px; }
 
+.account .hint { margin-bottom: 10px; overflow-wrap: anywhere; }
 .form { display: grid; gap: 10px; }
 .field { display: grid; gap: 4px; min-width: 0; }
 .field > span { font-size: 16px; font-weight: 600; color: var(--muted); }
