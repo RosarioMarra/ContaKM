@@ -249,8 +249,6 @@
       led: glow(0x34d399, 1),
       phone: new THREE.MeshBasicMaterial({ map: phoneTexture(), toneMapped: false }),
       mirror: std(0xdfe8f2, 1, 0.04),
-      bag: std(0x2d3a2f, 0, 0.85),
-      wicker: std(0x9a7a52, 0.1, 0.75),
     };
   }
 
@@ -1042,46 +1040,6 @@
         }
       }
     }
-    if (styleName === 'e-trekking') {
-      // Borsa da viaggio agganciata a sinistra del portapacchi, con tasca e striscia riflettente
-      const bag = new THREE.Group();
-      bag.position.set(-0.47, 0.6, -0.13);
-      const shell = box(0.3, 0.27, 0.11, mat.bag, [0, 0, 0]);
-      const flap = box(0.31, 0.06, 0.115, mat.bag, [0, 0.125, 0]);
-      const pocket = box(0.18, 0.13, 0.03, mat.bag, [0.02, -0.03, -0.068]);
-      const strip = box(0.3, 0.012, 0.004, mat.lens, [0, 0.07, -0.0565]);
-      for (const m of [shell, flap, pocket, strip]) bag.add(m);
-      for (const hx of [-0.08, 0.08]) bag.add(box(0.03, 0.03, 0.02, mat.dark, [hx, 0.15, 0.05]));
-      bike.add(bag);
-    }
-    if (styleName === 'city') {
-      // Cestino di vimini davanti al manubrio, con le due astine fino al mozzo anteriore
-      const bx = stemTop.x + 0.19;
-      const by = stemTop.y - 0.04;
-      const w = 0.27;
-      const d = 0.34;
-      const h = 0.19;
-      const basket = new THREE.Group();
-      basket.position.set(bx, by, 0);
-      basket.add(box(w, 0.012, d, mat.wicker, [0, -h / 2, 0]));
-      for (const y of [-h / 2, -h / 6, h / 6, h / 2]) {
-        for (const [ax, az, bx2, bz] of [[-w / 2, -d / 2, w / 2, -d / 2], [w / 2, -d / 2, w / 2, d / 2], [w / 2, d / 2, -w / 2, d / 2], [-w / 2, d / 2, -w / 2, -d / 2]]) {
-          basket.add(tube([ax, y, az], [bx2, y, bz], y === h / 2 ? 0.007 : 0.004, mat.wicker, 6));
-        }
-      }
-      for (let i = 0; i <= 14; i++) {
-        const t = i / 14;
-        for (const z of [-d / 2, d / 2]) basket.add(tube([-w / 2 + t * w, -h / 2, z], [-w / 2 + t * w, h / 2, z], 0.0035, mat.wicker, 5));
-      }
-      for (let i = 0; i <= 18; i++) {
-        const t = i / 18;
-        for (const x of [-w / 2, w / 2]) basket.add(tube([x, -h / 2, -d / 2 + t * d], [x, h / 2, -d / 2 + t * d], 0.0035, mat.wicker, 5));
-      }
-      bike.add(basket);
-      for (const z of [-0.09, 0.09]) bike.add(tube(v3([bx + 0.06, by - h / 2], z), v3([front.x, front.y], Math.sign(z) * Z * 1.15), 0.0045, mat.metal, 6));
-      bike.add(tube(v3([stemTop.x + 0.01, stemTop.y - 0.01]), v3([bx - w / 2, by + 0.02]), 0.006, mat.metal, 6));
-    }
-
     // Marchio sul telaio, ai due lati del tubo obliquo (sul piantone nei telai bassi)
     {
       const onSeat = S.top === 'low' || S.top === 'fold';
