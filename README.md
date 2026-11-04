@@ -66,6 +66,8 @@ In Profilo si accede con Google (gestito da Supabase). Con l'accesso attivo usci
 
 ## App Android (Play Store)
 
+Tutto il materiale per la scheda dello store (icona, grafica, screenshot in italiano e inglese, testi e risposte ai moduli) e la guida passo passo sono in `play-store/` (`play-store/GUIDA.md`).
+
 La cartella `android/` è l'app nativa fatta con Capacitor: contiene gli stessi file del sito, quindi funziona anche senza internet. Dentro l'app voce, schermo acceso e condivisione usano le funzioni di Android. Durante un'uscita (o con il navigatore attivo) il GPS continua anche a schermo spento o con un'altra app aperta, con la notifica fissa "ContaKM sta registrando l'uscita".
 
 Il servizio in primo piano di tipo posizione (`FOREGROUND_SERVICE_LOCATION`) va dichiarato nella Play Console, in Contenuti dell'app, con un breve video che mostra la notifica durante un'uscita.
