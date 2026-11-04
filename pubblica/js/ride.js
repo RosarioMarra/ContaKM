@@ -8,7 +8,10 @@
   const MAX_PLAUSIBLE_MS = 30;   // 108 km/h: oltre è un salto del GPS
   const MOVING_MIN_MS = 2 / KMH; // sotto i 2 km/h si è fermi e il tempo si ferma da solo
   const SIGNAL_LOST_MS = 8000;
+  const GAP_MS = 8000;           // GPS sospeso (schermo spento, altra app): il percorso riparte da un nuovo tratto
+  const MAX_GAP_SPEED_MS = 50 / KMH; // il tratto senza GPS si conta solo se è plausibile in bici
   const TRACK_STEP_M = 25;
+  const MAX_TRACK_JUMP_M = 150;  // tra due punti salvati di seguito, oltre è un salto del GPS
   const CLIMB_STEP_M = 4;        // filtra il rumore dell'altitudine GPS
 
   class Ride {
@@ -29,6 +32,7 @@
       this.anchor = null;
       this.lastFixAt = 0;
       this.lastTickAt = null;
+      this.trackingSince = 0; // da quando il GPS arriva senza interruzioni
       this.smoothAlt = null;
       this.climbRef = null;
     }
@@ -74,6 +78,10 @@
     }
 
     addDistance(fix) {
+      if (this.anchor && fix.time - this.anchor.time > GAP_MS) {
+        this.bridgeGap(fix);
+        return;
+      }
       // Da fermi il GPS "balla": conta solo uno spostamento vero e in movimento.
       if (!this.anchor || !this.moving) {
         this.anchor = fix;
@@ -88,14 +96,34 @@
       this.updateClimb(fix.altitude);
     }
 
-    addTrackPoint(fix) {
+    /**
+     * Il GPS è tornato dopo una pausa: niente linea dritta sulla mappa.
+     * La distanza in linea d'aria e il suo tempo si contano solo se la velocità è da bici.
+     */
+    bridgeGap(fix) {
+      const dt = fix.time - this.anchor.time;
+      const gapM = distance(this.anchor, fix);
+      const gapSpeed = gapM / (dt / 1000);
+      if (gapSpeed >= MOVING_MIN_MS && gapSpeed <= MAX_GAP_SPEED_MS) {
+        this.distanceM += gapM;
+        this.movingMs += dt;
+      }
+      this.anchor = fix;
+      this.trackingSince = fix.time;
+      this.addTrackPoint(fix, true);
+    }
+
+    /** Punto del percorso: [lat, lon, secondi dalla partenza] e un 1 in fondo se apre un nuovo tratto. */
+    addTrackPoint(fix, newSegment = false) {
       const last = this.track[this.track.length - 1];
-      if (last && distance({ lat: last[0], lon: last[1] }, fix) < TRACK_STEP_M) return;
-      this.track.push([
+      if (!newSegment && last && distance({ lat: last[0], lon: last[1] }, fix) < TRACK_STEP_M) return;
+      const point = [
         +fix.lat.toFixed(5),
         +fix.lon.toFixed(5),
         Math.round((fix.time - this.startedAt) / 1000),
-      ]);
+      ];
+      if (newSegment && last) point.push(1);
+      this.track.push(point);
     }
 
     updateClimb(altitude) {
@@ -111,11 +139,15 @@
       }
     }
 
-    /** Da chiamare ogni secondo: aggiorna il tempo anche se il GPS tace. */
+    /**
+     * Da chiamare ogni secondo: aggiorna il tempo anche se il GPS tace.
+     * In sottofondo Android rallenta i timer: il tempo trascorso si conta tutto, ma solo dal momento
+     * in cui il GPS è tornato dopo un'interruzione (quello prima lo conta già bridgeGap).
+     */
     tick(now = Date.now()) {
       if (this.lastFixAt && now - this.lastFixAt > SIGNAL_LOST_MS) this.speedMs = 0;
       if (this.state === 'running' && this.moving && this.lastTickAt) {
-        this.movingMs += now - this.lastTickAt;
+        this.movingMs += Math.max(0, now - Math.max(this.lastTickAt, this.trackingSince));
       }
       this.lastTickAt = now;
     }
@@ -137,5 +169,23 @@
     }
   }
 
+  /**
+   * Divide il percorso nei tratti registrati senza interruzioni del GPS.
+   * Le uscite salvate prima non hanno il segno di nuovo tratto: lì il salto si riconosce dalla distanza,
+   * perché pedalando i punti vengono salvati ogni 25 m circa.
+   */
+  function trackSegments(track) {
+    const segments = [];
+    let prev = null;
+    for (const p of track) {
+      const jump = prev && distance({ lat: prev[0], lon: prev[1] }, { lat: p[0], lon: p[1] }) > MAX_TRACK_JUMP_M;
+      if (p[3] === 1 || jump || segments.length === 0) segments.push([]);
+      prev = p;
+      segments[segments.length - 1].push(p);
+    }
+    return segments.filter((s) => s.length >= 2);
+  }
+
   globalThis.ContaKM.Ride = Ride;
+  globalThis.ContaKM.trackSegments = trackSegments;
 })();

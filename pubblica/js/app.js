@@ -2,7 +2,7 @@
 
 (() => {
   const {
-    Ride, NavSession, arrowAngle, caloriesFor, fetchRoute, maneuverIcon, realGps, searchPlaces, simGps, store, summarize,
+    Ride, NavSession, arrowAngle, caloriesFor, fetchRoute, maneuverIcon, native, realGps, searchPlaces, simGps, store, summarize, trackSegments,
   } = globalThis.ContaKM;
 
   const L = window.L;
@@ -98,7 +98,12 @@
   }
 
   function say(text) {
-    if (!prefs.voice || !('speechSynthesis' in window)) return;
+    if (!prefs.voice) return;
+    if (native.isNative) {
+      native.say(text);
+      return;
+    }
+    if (!('speechSynthesis' in window)) return;
     speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'it-IT';
@@ -106,6 +111,10 @@
   }
 
   function saveFile(name, content, type) {
+    if (native.isNative) {
+      native.saveFile(name, content).catch(() => toast('Salvataggio non riuscito'));
+      return;
+    }
     const link = document.createElement('a');
     link.href = URL.createObjectURL(new Blob([content], { type }));
     link.download = name;
@@ -130,7 +139,9 @@
   function onGpsError(err) {
     if (err.code === 1 || err.code === 0) {
       gpsError = true;
-      showAlert('Posizione bloccata: abilitala per questo sito nelle impostazioni del browser e ricarica.');
+      showAlert(native.isNative
+        ? 'Posizione bloccata: abilitala per ContaKM nelle impostazioni del telefono e riapri l\'app.'
+        : 'Posizione bloccata: abilitala per questo sito nelle impostazioni del browser e ricarica.');
     } else if (!lastFix) {
       showAlert('GPS non trovato. Sul computer di solito manca: puoi provare il giro simulato.');
     }
@@ -146,6 +157,12 @@
   }
 
   function updateScreenLock() {
+    if (native.isNative) {
+      const active = ride.state === 'running' || Boolean(nav);
+      native.keepAwake(active);
+      if (!isDemo) native.backgroundTracking(active);
+      return;
+    }
     if (ride.state === 'running' || nav) keepScreenOn();
     else if (wakeLock) wakeLock.release();
   }
@@ -309,6 +326,7 @@
     root.dataset.theme = prefs.sun ? 'sun' : 'dark';
     root.dataset.accent = prefs.accent;
     document.querySelector('meta[name="theme-color"]').content = prefs.sun ? '#ffffff' : '#0f1b2d';
+    if (native.isNative) native.statusBar(prefs.sun);
     $('btn-sun').setAttribute('aria-pressed', prefs.sun);
     $('btn-voice').setAttribute('aria-pressed', prefs.voice);
     $('btn-voice').querySelector('use').setAttribute('href', prefs.voice ? '#i-voice' : '#i-voice-off');
@@ -650,7 +668,7 @@
 
   function setupMic() {
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!Recognition) return;
+    if (!Recognition || native.isNative) return; // nella WebView di Android il riconoscimento vocale non funziona
     const btn = $('btn-mic');
     btn.hidden = false;
     btn.addEventListener('click', () => {
@@ -749,15 +767,16 @@
       statTile(String(Math.round(caloriesFor(r.distanceM, r.movingMs, prefs.weightKg))), 'kcal stimate'),
     );
     resetDeleteButton();
-    $('btn-gpx').hidden = r.track.length < 2;
+    const segments = trackSegments(r.track).map((s) => s.map((p) => [p[0], p[1]]));
+    $('btn-gpx').hidden = segments.length === 0;
     $('detail').showModal();
 
     const mapEl = $('detail-map');
-    mapEl.hidden = r.track.length < 2;
-    if (r.track.length >= 2) {
+    mapEl.hidden = segments.length === 0;
+    if (segments.length > 0) {
       detailMap = L.map(mapEl, { zoomControl: false, maxZoom: 19 });
       detailMap.attributionControl.setPrefix(false);
-      const line = L.polyline(r.track.map((p) => [p[0], p[1]]), { color: ROUTE_COLOR, weight: 6 });
+      const line = L.polyline(segments, { color: ROUTE_COLOR, weight: 6 });
       detailMap.fitBounds(line.getBounds(), { padding: [20, 20], animate: false });
       createTiles(detailMap);
       line.addTo(detailMap);
@@ -789,14 +808,15 @@
 
   function downloadGpx() {
     const r = detailRide;
-    const points = r.track
-      .map((p) => `<trkpt lat="${p[0]}" lon="${p[1]}"><time>${new Date(r.startedAt + p[2] * 1000).toISOString()}</time></trkpt>`)
+    const point = (p) => `<trkpt lat="${p[0]}" lon="${p[1]}"><time>${new Date(r.startedAt + p[2] * 1000).toISOString()}</time></trkpt>`;
+    const segments = trackSegments(r.track)
+      .map((s) => `<trkseg>\n${s.map(point).join('\n')}\n</trkseg>`)
       .join('\n');
     const gpx = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="ContaKM" xmlns="http://www.topografix.com/GPX/1/1">
-<trk><name>Uscita ${new Date(r.startedAt).toLocaleDateString('it-IT')}</name><type>cycling</type><trkseg>
-${points}
-</trkseg></trk>
+<trk><name>Uscita ${new Date(r.startedAt).toLocaleDateString('it-IT')}</name><type>cycling</type>
+${segments}
+</trk>
 </gpx>`;
     saveFile(`contakm-${new Date(r.startedAt).toISOString().slice(0, 10)}.gpx`, gpx, 'application/gpx+xml');
   }
@@ -880,7 +900,9 @@ ${points}
     }
     const url = `https://www.openstreetmap.org/?mlat=${lastFix.lat.toFixed(5)}&mlon=${lastFix.lon.toFixed(5)}#map=17/${lastFix.lat.toFixed(5)}/${lastFix.lon.toFixed(5)}`;
     try {
-      if (navigator.share) {
+      if (native.isNative) {
+        await native.share({ title: 'La mia posizione', text: 'Sono qui in bici:', url });
+      } else if (navigator.share) {
         await navigator.share({ title: 'La mia posizione', text: 'Sono qui in bici:', url });
       } else {
         await navigator.clipboard.writeText(url);
@@ -912,6 +934,12 @@ ${points}
     setupToggle('set-wecity', 'wecity');
     $('set-wecity').addEventListener('click', render);
     $('btn-wecity').href = wecityLink();
+    if (native.isNative) {
+      $('btn-wecity').addEventListener('click', (e) => {
+        e.preventDefault();
+        native.openApp('it.wecity.app3', WECITY_PLAY_URL);
+      });
+    }
     setupStepper('set-weight', 'weightKg', 1, 30, 200, render);
     setupStepper('set-goal', 'weeklyGoalKm', 10, 0, 1000);
     setupStepper('set-service', 'serviceEveryKm', 50, 50, 5000, renderService);
@@ -1045,7 +1073,8 @@ ${points}
 
   // In locale il service worker è spento, così le modifiche si vedono subito.
   const canInstall = location.protocol === 'https:' || (location.hostname === 'localhost' && params.has('sw'));
-  if ('serviceWorker' in navigator && canInstall) {
+  // Nell'app Android i file sono già nel telefono: il service worker non serve.
+  if ('serviceWorker' in navigator && canInstall && !native.isNative) {
     const hadController = Boolean(navigator.serviceWorker.controller);
     navigator.serviceWorker.register('sw.js').then((reg) => {
       // Riaprendo l'app dal sottofondo la pagina non si ricarica: si controlla qui se c'è una versione nuova.

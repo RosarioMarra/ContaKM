@@ -10,8 +10,9 @@
   --danger: #ff6b63;
   --ok: #3ddc97;
   --font: "Roboto Condensed", "Arial Narrow", "Helvetica Neue", system-ui, sans-serif;
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* Nell'app Android Capacitor scrive --safe-area-inset-*; nel browser vale env(). */
+  --safe-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --safe-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
 }
 
 :root[data-accent="blue"] { --accent: #38bdf8; --on-accent: #04202e; }
