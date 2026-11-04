@@ -110,7 +110,7 @@ test('ogni voce di manutenzione sa su quale pezzo zoomare', () => {
   assert.equal(part('tyres'), 'tyres');
   assert.equal(part('battery'), 'battery');
   assert.equal(part('service'), 'all');
-  assert.equal(bikes.partFor({ label: 'Regolazione cambio' }), 'chain');
+  assert.equal(bikes.partFor({ label: 'Regolazione cambio' }), 'gears');
   assert.equal(bikes.partFor({ label: 'Spurgo freni idraulici' }), 'brakes');
   assert.equal(bikes.partFor({ label: 'Cambio sella' }), 'saddle');
   assert.equal(bikes.partFor({ label: 'Lavaggio' }), 'all');

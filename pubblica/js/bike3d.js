@@ -243,7 +243,7 @@
         const cog = new THREE.Mesh(new THREE.TorusGeometry(0.03 + (9 - i) * 0.008, 0.005, 6, 28), mat.chain);
         cog.position.z = 0.045 + i * 0.006;
         g.add(cog);
-        parts.chain.push(cog);
+        parts.gears.push(cog);
       }
       if (S.motor === 'hub') {
         const motor = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.07, 32), mat.motor);
@@ -257,7 +257,7 @@
 
   function buildBike(styleName, mat, extraBattery) {
     const S = settle(STYLES[styleName] || STYLES.classic);
-    const parts = { tyres: [], brakes: [], chain: [], battery: [], saddle: [], handlebar: [], bell: [], wheels: [], lights: [] };
+    const parts = { tyres: [], brakes: [], chain: [], gears: [], battery: [], saddle: [], handlebar: [], bell: [], wheels: [], lights: [] };
     const bike = new THREE.Group();
     const rearR = S.rearR || S.R;
     const rear = v3([S.rear, rearR]);
@@ -466,35 +466,123 @@
     }
     bike.add(crank);
     const ringR = S.motor === 'mid' ? 0.085 : 0.1;
-    const chainZ = 0.06 + (S.motor === 'mid' ? 0.01 : 0);
-    const chainTop = tube(v3([bb.x, bb.y + ringR], chainZ), v3([rear.x, rear.y + 0.042], chainZ), 0.006, mat.chain, 6);
-    const chainLow = tube(v3([bb.x, bb.y - ringR], chainZ), v3([rear.x, rear.y - 0.042], chainZ), 0.006, mat.chain, 6);
-    bike.add(chainTop, chainLow);
-    parts.chain.push(chainTop, chainLow);
-    if (S.motor !== 'hub' || S.top !== 'fold') {
-      // Cambio posteriore: forcellino, parallelogramma, gabbia con due rotelline dentate
-      const derailleur = new THREE.Group();
-      const dz = chainZ + 0.016;
-      derailleur.add(box(0.03, 0.022, 0.008, mat.metal, [rear.x - 0.005, rear.y - 0.022, dz], -0.4));
-      derailleur.add(box(0.045, 0.026, 0.02, mat.dark, [rear.x - 0.02, rear.y - 0.05, dz], 0.5));
-      const p1 = v3([rear.x - 0.012, rear.y - 0.075], chainZ);
-      const p2 = v3([rear.x + 0.012, rear.y - 0.135], chainZ);
-      for (const p of [p1, p2]) {
-        const pulley = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.007, 12), mat.dark);
-        pulley.rotation.x = Math.PI / 2;
-        pulley.position.copy(p);
-        derailleur.add(pulley);
-        const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.03, 8), mat.metal);
-        hub.rotation.x = Math.PI / 2;
-        hub.position.copy(p);
-        derailleur.add(hub);
-      }
-      for (const z of [chainZ - 0.009, chainZ + 0.009]) derailleur.add(tube(v3([p1.x, p1.y], z), v3([p2.x, p2.y], z), 0.013, mat.metal, 8));
-      bike.add(derailleur);
-      parts.chain.push(...derailleur.children);
-      // La catena scende dal pignone, gira sulle rotelline e torna alla corona
-      bike.add(tube(v3([rear.x - 0.03, rear.y - 0.03], chainZ), p1, 0.005, mat.chain, 6));
+    const chainZ = 0.06 + (S.motor === 'mid' ? 0.02 : 0); // allineata alla corona
+
+    // ---- Cambio posteriore ----
+    // La catena è sul sesto pignone; il cambio pende sotto il mozzo, dietro, allineato a quel pignone.
+    const COG = 5;
+    const cogR = 0.03 + (9 - COG) * 0.008;
+    const cogZ = 0.045 + COG * 0.006;
+    const pulleyR = 0.017;
+    const upper = v3([rear.x - 0.03, rear.y - cogR - 0.032], cogZ);
+    const lower = v3([rear.x - 0.008, rear.y - cogR - 0.11], cogZ);
+    const derailleur = new THREE.Group();
+    const knuckleB = v3([rear.x - 0.012, rear.y - 0.03], cogZ + 0.03);
+    const knuckleP = v3([upper.x - 0.012, upper.y + 0.016], cogZ + 0.03);
+    // Forcellino avvitato al telaio
+    derailleur.add(box(0.03, 0.03, 0.006, mat.frame, [rear.x - 0.004, rear.y - 0.018, cogZ + 0.022], -0.5));
+    for (const k of [knuckleB, knuckleP]) {
+      const knuckle = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.022, 14), mat.dark);
+      knuckle.rotation.x = Math.PI / 2;
+      knuckle.position.copy(k);
+      derailleur.add(knuckle);
     }
+    // Parallelogramma: due bracci tra i due snodi
+    for (const dz of [-0.006, 0.006]) {
+      derailleur.add(tube(knuckleB.clone().add(new THREE.Vector3(0, 0, dz)), knuckleP.clone().add(new THREE.Vector3(0, 0, dz)), 0.006, dz < 0 ? mat.dark : mat.metal, 8));
+    }
+    derailleur.add(tube(knuckleP, v3([upper.x, upper.y], cogZ + 0.012), 0.005, mat.metal, 8));
+    // Gabbia: due piastre sagomate attorno alle rotelline
+    const d = lower.clone().sub(upper);
+    const ang = Math.atan2(d.y, d.x);
+    const cage = new THREE.Shape();
+    const cr = 0.023;
+    cage.absarc(upper.x, upper.y, cr, ang + Math.PI / 2, ang + (3 * Math.PI) / 2, false);
+    cage.absarc(lower.x, lower.y, cr * 1.05, ang - Math.PI / 2, ang + Math.PI / 2, false);
+    cage.closePath();
+    const cageGeo = new THREE.ExtrudeGeometry(cage, { depth: 0.0025, bevelEnabled: true, bevelThickness: 0.0008, bevelSize: 0.0008, bevelSegments: 1, curveSegments: 14 });
+    for (const [z, m] of [[cogZ + 0.011, mat.dark], [cogZ - 0.0135, mat.metal]]) {
+      const plate = new THREE.Mesh(cageGeo, m);
+      plate.position.z = z;
+      derailleur.add(plate);
+    }
+    // Rotelline dentate che girano con la catena
+    const pulleys = [];
+    for (const c of [upper, lower]) {
+      const pulley = new THREE.Group();
+      pulley.position.copy(c);
+      const wheelDisc = new THREE.Mesh(new THREE.CylinderGeometry(pulleyR - 0.002, pulleyR - 0.002, 0.006, 16), mat.dark);
+      wheelDisc.rotation.x = Math.PI / 2;
+      pulley.add(wheelDisc);
+      const tooth = new THREE.BoxGeometry(0.004, 0.005, 0.005);
+      for (let i = 0; i < 11; i++) {
+        const a = (i / 11) * Math.PI * 2;
+        const t = new THREE.Mesh(tooth, mat.dark);
+        t.position.set(Math.cos(a) * pulleyR, Math.sin(a) * pulleyR, 0);
+        t.rotation.z = a;
+        pulley.add(t);
+      }
+      const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.03, 8), mat.metal);
+      bolt.rotation.x = Math.PI / 2;
+      pulley.add(bolt);
+      derailleur.add(pulley);
+      pulleys.push(pulley);
+    }
+    bike.add(derailleur);
+    derailleur.traverse((o) => { if (o.isMesh) parts.gears.push(o); });
+
+    // ---- Catena a maglie ----
+    // Percorso chiuso come sulle bici vere: sopra la corona, indietro fino al pignone, giù attorno al pignone,
+    // davanti alla rotellina alta e dietro a quella bassa (la "S" del cambio), poi avanti sotto la corona.
+    const arc = (cx, cy, r, from, to, z, n) => Array.from({ length: n + 1 }, (_, i) => {
+      const a = from + ((to - from) * i) / n;
+      return new THREE.Vector3(cx + Math.cos(a) * r, cy + Math.sin(a) * r, z);
+    });
+    const deg = Math.PI / 180;
+    const pathPoints = [
+      ...arc(bb.x, bb.y, ringR, 85 * deg, 95 * deg, chainZ, 1),
+      ...arc(rear.x, rear.y, cogR, 90 * deg, 228 * deg, cogZ, 7),
+      ...arc(upper.x, upper.y, pulleyR, 70 * deg, -70 * deg, cogZ, 5),
+      ...arc(lower.x, lower.y, pulleyR, 175 * deg, 290 * deg, cogZ, 5),
+      ...arc(bb.x, bb.y, ringR, -95 * deg, 80 * deg, chainZ, 12),
+    ].filter((p, i, all) => i === 0 || p.distanceTo(all[i - 1]) > 0.004);
+    const chainCurve = new THREE.CatmullRomCurve3(pathPoints, true, 'centripetal');
+    const chainLength = chainCurve.getLength();
+    const PITCH = 0.0127; // mezzo pollice, il passo delle catene da bici
+    const links = Math.round(chainLength / PITCH);
+    const SAMPLES = 1200;
+    const samples = chainCurve.getSpacedPoints(SAMPLES);
+    const plate = new THREE.BoxGeometry(PITCH * 1.08, 0.0072, 0.0016);
+    const linkMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.85, roughness: 0.32 });
+    const chainMesh = new THREE.InstancedMesh(plate, linkMat, links * 2);
+    const silver = new THREE.Color(0xb7bfc8);
+    const darkLink = new THREE.Color(0x4a525b);
+    for (let i = 0; i < links * 2; i++) chainMesh.setColorAt(i, Math.floor(i / 2) % 2 ? darkLink : silver);
+    const m4 = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const zAxis = new THREE.Vector3(0, 0, 1);
+    const one = new THREE.Vector3(1, 1, 1);
+    const pos = new THREE.Vector3();
+    /** Fa scorrere la catena di "offset" metri lungo il percorso (e gira le rotelline). */
+    function moveChain(offset) {
+      for (let k = 0; k < links; k++) {
+        const u = ((((k * PITCH + offset) % chainLength) + chainLength) % chainLength) / chainLength;
+        const i = Math.floor(u * SAMPLES);
+        const a = samples[i];
+        const b = samples[(i + 1) % SAMPLES];
+        q.setFromAxisAngle(zAxis, Math.atan2(b.y - a.y, b.x - a.x));
+        for (const [n, dz] of [[0, -0.0034], [1, 0.0034]]) {
+          pos.set(a.x, a.y, a.z + dz);
+          chainMesh.setMatrixAt(k * 2 + n, m4.compose(pos, q, one));
+        }
+      }
+      chainMesh.instanceMatrix.needsUpdate = true;
+      for (const p of pulleys) p.rotation.z = -offset / pulleyR;
+    }
+    moveChain(0);
+    bike.add(chainMesh);
+    parts.chain.push(chainMesh);
+    const derailleurCable = knuckleB.clone().add(new THREE.Vector3(0.01, 0.01, 0.005));
     if (S.double) {
       // Doppia corona e cambio anteriore sul piantone
       const small = new THREE.Mesh(new THREE.TorusGeometry(0.074, 0.007, 8, 40), mat.chain);
@@ -546,9 +634,9 @@
     // ---- Accessori ----
     if (S.fenders) {
       // Angoli: 0 = davanti, PI/2 = in alto, PI = dietro
-      // Davanti copre da poco sopra l'orizzontale fin dietro la forcella; dietro dal piantone a poco sotto il mozzo.
+      // Davanti copre da poco sopra l'orizzontale fin dietro la forcella; dietro dal piantone a poco sopra l'altezza del mozzo.
       const fenders = [[front, S.R, 0.72, 1.7]];
-      if (!S.longtail) fenders.push([rear, rearR, 1.3, 2.05]);
+      if (!S.longtail) fenders.push([rear, rearR, 1.42, 1.62]);
       for (const [c, R, start, arcLen] of fenders) {
         const fr = R + S.tire + 0.022;
         const arc = new THREE.Mesh(new THREE.TorusGeometry(fr, 0.026, 6, 40, arcLen), mat.frame);
@@ -661,7 +749,7 @@
     const shiftFrom = leverAt(1).clone().add(new THREE.Vector3(0, -0.02, -0.03));
     const downMid = S.top === 'low' || S.top === 'fold' ? v3([0.15, 0.4], 0.035) : bb.clone().lerp(headLow, 0.5).add(new THREE.Vector3(0, -T * 1.4, 0.03));
     bike.add(curve([shiftFrom, [head.x + 0.14, stemTop.y - 0.02, 0.06], [headLow.x + 0.02, headLow.y - 0.03, 0.035], downMid,
-      [bb.x + 0.02, bb.y - 0.05, 0.035], [bb.x - 0.12, bb.y + 0.0, 0.055], [rear.x + 0.12, rear.y + 0.015, 0.06], [rear.x - 0.02, rear.y - 0.04, chainZ + 0.03]], 0.0032, mat.cable, 90));
+      [bb.x + 0.02, bb.y - 0.05, 0.035], [bb.x - 0.12, bb.y + 0.0, 0.055], [rear.x + 0.12, rear.y + 0.015, 0.06], [rear.x + 0.02, rear.y - 0.01, cogZ + 0.035], derailleurCable], 0.0032, mat.cable, 90));
     if (S.double) {
       const fd = bb.clone().lerp(seat, 0.27);
       bike.add(curve([leverAt(-1).clone().add(new THREE.Vector3(0, -0.02, 0.03)), [head.x + 0.14, stemTop.y - 0.02, -0.06], [headLow.x + 0.02, headLow.y - 0.03, -0.03],
@@ -673,7 +761,7 @@
     }
 
     bike.position.y = LIFT + S.tire;
-    return { bike, parts, crank, extra, S };
+    return { bike, parts, crank, extra, S, moveChain, ringR };
   }
 
   /** Dove guardare per ogni pezzo, in base alle misure del modello. */
@@ -693,6 +781,7 @@
         return { target: p, dist: 1.0, yaw: 0.35 };
       }
       case 'saddle': return { target: [S.seat[0] - 0.05, y0 + S.saddleY, 0], dist: 0.85, yaw: 0.55 };
+      case 'gears': return { target: [S.rear - 0.02, y0 + rearR - 0.09, 0.07], dist: 0.6, yaw: -0.3 };
       case 'lights': {
         const p = S.lamp ? [S.headLow[0] + 0.07, y0 + S.headLow[1] + 0.02, 0] : [S.head[0] + 0.08, y0 + S.head[1] + 0.06, 0];
         return { target: p, dist: 0.9, yaw: -0.5 };
@@ -888,6 +977,7 @@
     let autoSpin = !reduced;
     let speedMs = 0;
     let spinBoost = 0;
+    let chainOffset = 0;
     let hop = 0;
     let advance = 0;
     let roadFade = 0;
@@ -910,7 +1000,7 @@
     new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; }).observe(container);
 
     function setGoal(part) {
-      const known = ['tyres', 'brakes', 'chain', 'battery', 'saddle', 'handlebar', 'lights'].includes(part);
+      const known = ['tyres', 'brakes', 'chain', 'gears', 'battery', 'saddle', 'handlebar', 'lights'].includes(part);
       focusPart = known ? part : 'all';
       const f = focusFor(focusPart, built.S);
       goal.target.set(...f.target);
@@ -938,7 +1028,7 @@
     const el = renderer.domElement;
     el.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
-      el.setPointerCapture(e.pointerId);
+      try { el.setPointerCapture(e.pointerId); } catch { /* tocco simulato */ }
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       tap = pointers.size === 1 ? { x: e.clientX, y: e.clientY, t: performance.now() } : null;
       if (pointers.size === 2) {
@@ -1039,7 +1129,11 @@
       const real = mode === 'ride' ? speedMs : speedMs > 0.3 ? speedMs : reduced ? 0 : 1.1;
       const v = real + spinBoost + advance * 6;
       for (const w of built.parts.wheels) w.rotation.z -= (v / w.userData.R) * dt;
-      built.crank.rotation.z -= (v / built.S.R) * 0.55 * dt;
+      const crankStep = (v / built.S.R) * 0.55 * dt;
+      built.crank.rotation.z -= crankStep;
+      // La catena scorre quanto gira la corona
+      chainOffset += crankStep * built.ringR;
+      built.moveChain(chainOffset);
 
       // In uscita la strada compare e scorre sotto le ruote; la bici entra da sinistra.
       roadFade += ((mode === 'ride' ? 1 : 0) - roadFade) * Math.min(1, dt * 3);
@@ -1116,6 +1210,11 @@
       celebrate() {
         hop = 1;
         spinBoost = 10;
+      },
+      /** Ferma la rotazione su un angolo preciso (per le anteprime). */
+      pose(yaw) {
+        autoSpin = false;
+        cam.yaw = goal.yaw = yaw;
       },
     };
   }
