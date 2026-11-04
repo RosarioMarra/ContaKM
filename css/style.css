@@ -782,30 +782,6 @@ body {
 .about { margin: 18px 0 8px; text-align: center; font-size: 14px; color: var(--muted); }
 .about a { color: var(--muted); }
 
-/* ==========================================================================
-   Home: pannello dei dati comprimibile
-   ========================================================================== */
-
-/* Pannello in basso comprimibile */
-.ride-panel { flex: none; display: flex; flex-direction: column; gap: 8px; }
-.ride-panel-body { display: flex; flex-direction: column; gap: 8px; }
-.panel-toggle {
-  display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 12px; border-radius: 12px;
-  background: color-mix(in srgb, var(--surface) 55%, transparent); border: 1px solid var(--line);
-  font-size: 14px; font-weight: 700; color: var(--muted);
-}
-.panel-mini { flex: 1; min-width: 0; text-align: left; font-size: 15px; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; visibility: hidden; }
-.panel-toggle-text { flex: none; }
-.panel-chev { flex: none; font-size: 18px; transition: transform .3s cubic-bezier(.3, 1.4, .5, 1); }
-.ride-panel[data-collapsed="1"] .ride-panel-body { display: none; }
-.ride-panel[data-collapsed="1"] .panel-mini { visibility: visible; }
-.ride-panel[data-collapsed="1"] .panel-chev { transform: rotate(180deg); }
-.ride-panel:not([data-collapsed="1"]) .ride-panel-body { animation: tile-in .35s cubic-bezier(.2, .8, .2, 1); }
-
-/* Telefono in orizzontale sul manubrio: il pannello sta nella colonna di destra */
-@media (orientation: landscape) and (max-height: 560px) {
-  .ride-panel { grid-column: 2; grid-row: 2 / 5; min-height: 0; overflow-y: auto; }
-}
 
 /* Scelta del modello: due gruppi di "chip" */
 .frame-picker { display: grid; gap: 6px; }
@@ -819,16 +795,7 @@ body {
 .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 @media (min-width: 1100px) and (min-height: 640px) { .chip { min-height: 34px; font-size: 14px; padding: 0 12px; } }
 
-/* La velocità grande si adatta allo spazio che ha davvero (schermi piccoli, pannello aperto) */
+/* La velocità grande si adatta allo spazio che ha davvero: sui telefoni piccoli non esce dal riquadro */
 #view-ride .speed { container-type: size; }
 #view-ride .speed-value { font-size: min(46vw, 28dvh, 72cqh); }
 #view-ride .speed-unit { font-size: clamp(14px, 9cqh, 24px); }
-@media (max-height: 700px) and (orientation: portrait) {
-  .stat-main .stat-value { font-size: min(9vw, 32px); }
-  .stats-small .stat-value, .stat-total .stat-value { font-size: 18px; }
-  .stat { padding: 3px 10px; }
-  .stat-label { font-size: 12px; }
-  .btn { min-height: 58px; font-size: 24px; }
-  .panel-toggle { min-height: 30px; }
-  .bike-pick { min-height: 38px; font-size: 16px; }
-}
