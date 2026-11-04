@@ -60,7 +60,8 @@
   // Prima i pezzi precisi: "cambio sella" è la sella, "cambio" da solo è il cambio della trasmissione.
   const PART_WORDS = [
     [/sell|reggisell/i, 'saddle'],
-    [/manubr|sterz|campanel|luc/i, 'handlebar'],
+    [/luc|fanal|faro|lamp/i, 'lights'],
+    [/manubr|sterz|campanel/i, 'handlebar'],
     [/fren|pastigl|disc/i, 'brakes'],
     [/copert|gomm|pneum|ruot|camer/i, 'tyres'],
     [/batter|motor/i, 'battery'],
