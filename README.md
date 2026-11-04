@@ -32,6 +32,33 @@ Finché la bici è in movimento lo schermo resta acceso e l'app deve restare in 
 
 Il numero di satelliti non è disponibile nei browser: l'app mostra la precisione GPS in metri, che è il dato reale fornito dal telefono.
 
+## App Android (Play Store)
+
+La cartella `android/` è l'app nativa fatta con Capacitor: contiene gli stessi file del sito, quindi funziona anche senza internet. Dentro l'app voce, schermo acceso, condivisione e "Apri WeCity" usano le funzioni di Android.
+
+Serve una volta sola: Node, Java 21 e l'Android SDK (Android Studio lo installa da solo).
+
+1. La chiave di firma (`contakm-upload.jks`) non è nella repository. Va indicata in `android/keystore.properties`, che resta fuori da GitHub:
+
+   ```properties
+   storeFile=/percorso/di/contakm-upload.jks
+   storePassword=…
+   keyAlias=contakm
+   keyPassword=…
+   ```
+
+2. Prima di ogni nuova versione aumenta `versionCode` (e `versionName`) in `android/app/build.gradle`: il Play Store rifiuta un numero già usato.
+3. Crea il file da caricare:
+
+   ```bash
+   npm install
+   npm run aab
+   ```
+
+   Il file è `android/app/build/outputs/bundle/release/app-release.aab`.
+
+Informativa sulla privacy per la scheda del Play Store: https://rosariomarra.github.io/ContaKM/privacy.html
+
 ## WeCity
 
 Il pulsante "Apri WeCity" apre l'app (`it.wecity.app3`) su Android; su iPhone porta all'App Store. Il tasto Start di WeCity va premuto a mano: una app non può toccare i pulsanti di un'altra. L'ordine giusto è prima WeCity, poi Avvia in ContaKM. Il pulsante si nasconde da Altro.

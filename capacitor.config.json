@@ -1,0 +1,14 @@
+{
+  "appId": "io.github.rosariomarra.contakm",
+  "appName": "ContaKM",
+  "webDir": "pubblica",
+  "backgroundColor": "#0f1b2d",
+  "android": {
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "SystemBars": {
+      "style": "DARK"
+    }
+  }
+}
