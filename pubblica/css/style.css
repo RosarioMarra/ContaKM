@@ -180,6 +180,21 @@ h2 { font-size: 20px; font-weight: 800; margin: 18px 0 8px; }
 
 /* Mappa */
 #map { position: absolute; inset: 0; background: var(--surface); user-select: none; }
+/* Mappa che gira con la direzione di marcia (vedi applyMapRotation) */
+#view-map { overflow: hidden; } /* la mappa girata è più grande dello schermo: non deve coprire il resto */
+.map-rot { position: absolute; inset: 0; transform-origin: 50% 50%; transition: transform .35s linear; will-change: transform; }
+.map-attr {
+  position: absolute; z-index: 450; right: 6px; bottom: 4px; padding: 1px 6px; border-radius: 6px;
+  font-size: 10px; color: #333; background: rgba(255, 255, 255, .75); pointer-events: none;
+}
+.map-north {
+  position: absolute; z-index: 500; right: 12px; top: calc(var(--safe-top) + 88px);
+  width: 52px; height: 52px; background: var(--bg); box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
+}
+.map-north svg { font-size: 30px; stroke: none; transition: transform .35s linear; }
+.map-north svg path { fill: var(--muted); }
+.map-north svg .north-n { fill: #ff4d4d; }
+.map-north[aria-pressed="true"] { border-color: var(--accent); }
 .search-btn {
   position: absolute; z-index: 500; top: calc(var(--safe-top) + 10px); left: 12px; right: 12px;
   height: 68px; display: flex; align-items: center; gap: 12px; padding: 0 18px;

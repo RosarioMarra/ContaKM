@@ -480,14 +480,60 @@
 
   function initMap() {
     if (map) return;
-    map = L.map('map', { zoomControl: false, center: [41.9, 12.5], zoom: 6, maxZoom: 19 });
-    map.attributionControl.setPrefix(false);
+    // L'attribuzione sta fuori dalla mappa (map-attr), così non gira con lei.
+    map = L.map('map', { zoomControl: false, attributionControl: false, center: [41.9, 12.5], zoom: 6, maxZoom: 19 });
+    layoutMapRotation();
     createTiles(map);
     updateTrail();
     map.on('dragstart', () => {
       following = false;
       $('btn-locate').hidden = false;
+      applyMapRotation();
     });
+    // Toccare la mappa girata la riporta subito a nord in alto, così trascinare e zoomare vanno nel verso giusto.
+    $('map-rot').addEventListener('pointerdown', () => {
+      if (!mapRotated) return;
+      following = false;
+      $('btn-locate').hidden = false;
+      applyMapRotation(true);
+    }, { capture: true });
+    window.addEventListener('resize', layoutMapRotation);
+  }
+
+  // ---------- Mappa orientata con la direzione di marcia ----------
+  // La mappa sta in un quadrato più grande dello schermo (la sua diagonale), che gira attorno al centro:
+  // così gli angoli restano sempre coperti. La posizione sta un po' più in basso per vedere più strada davanti.
+
+  let mapAngle = 0;
+  let mapRotated = false;
+  const LOOK_AHEAD = 0.2; // quanto si abbassa la posizione, in parte dell'altezza della mappa
+
+  function layoutMapRotation() {
+    if (!map) return;
+    const box = $('view-map').getBoundingClientRect();
+    if (!box.width || !box.height) return;
+    const side = Math.ceil(Math.hypot(box.width, box.height * (1 + 2 * LOOK_AHEAD)));
+    const rot = $('map-rot');
+    rot.style.width = rot.style.height = `${side}px`;
+    rot.style.left = `${(box.width - side) / 2}px`;
+    rot.style.top = `${(box.height - side) / 2}px`;
+    map.invalidateSize();
+    applyMapRotation(true);
+  }
+
+  function applyMapRotation(instant = false) {
+    const h = currentHeading();
+    const active = Boolean(prefs.mapRotate) && following && !pendingRoute && h != null && Boolean(lastFix);
+    mapRotated = active;
+    const target = active ? -h : 0;
+    mapAngle += ((((target - mapAngle) % 360) + 540) % 360) - 180; // la strada più corta
+    const shift = active ? $('view-map').getBoundingClientRect().height * LOOK_AHEAD : 0;
+    const rot = $('map-rot');
+    rot.style.transition = instant ? 'none' : '';
+    rot.style.transform = `translateY(${shift}px) rotate(${mapAngle}deg)`;
+    // La bussola indica dov'è il nord
+    $('btn-north').querySelector('svg').style.transform = `rotate(${active ? mapAngle : 0}deg)`;
+    $('btn-north').setAttribute('aria-pressed', Boolean(prefs.mapRotate));
   }
 
   /** Direzione da usare: GPS quando si pedala, bussola da fermi o piano. */
@@ -511,6 +557,7 @@
       const next = prev + ((((h - prev) % 360) + 540) % 360) - 180;
       svg.dataset.angle = String(next);
       svg.style.transform = `rotate(${next}deg)`;
+      applyMapRotation();
     });
   }
 
@@ -551,7 +598,7 @@
     }
     paintRider();
     if (pendingRoute) return;
-    if (firstFix) map.setView(latlng, 16);
+    if (firstFix) map.setView(latlng, 17);
     else if (following) map.panTo(latlng);
   }
 
@@ -570,7 +617,8 @@
   function recenter() {
     following = true;
     $('btn-locate').hidden = true;
-    if (lastFix) map.setView([lastFix.lat, lastFix.lon], Math.max(map.getZoom(), 16));
+    if (lastFix) map.setView([lastFix.lat, lastFix.lon], Math.max(map.getZoom(), 17));
+    applyMapRotation();
   }
 
   // ---------- Navigatore ----------
@@ -594,6 +642,7 @@
       $('toast').hidden = true;
       destination = place;
       pendingRoute = route;
+      applyMapRotation(true); // anteprima del percorso con il nord in alto
       drawRoute(route);
       destMarker?.remove();
       destMarker = L.circleMarker([place.lat, place.lon], { radius: 10, color: '#fff', weight: 3, fillColor: ROUTE_COLOR, fillOpacity: 1 }).addTo(map);
@@ -631,12 +680,13 @@
     map.invalidateSize();
     following = true;
     $('btn-locate').hidden = true;
-    if (lastFix) map.setView([lastFix.lat, lastFix.lon], 17);
+    if (lastFix) map.setView([lastFix.lat, lastFix.lon], 18);
     // "Parti" avvia anche la registrazione; se l'uscita parte da qui, all'arrivo viene salvata da sola.
     if (ride.state === 'idle') rideFromNav = true;
     if (ride.state !== 'running') ride.start();
     updateScreenLock();
     if (lastFix) updateNav(lastFix);
+    applyMapRotation();
     render();
   }
 
@@ -1787,7 +1837,7 @@ ${segments}
     if (name === 'map') {
       startGps();
       initMap();
-      map.invalidateSize();
+      layoutMapRotation();
       updateMapPosition(!riderMarker);
     }
     if (name === 'history') renderHistory();
@@ -1828,6 +1878,13 @@ ${segments}
       render();
     });
     $('btn-finish').addEventListener('click', finishRide);
+    $('btn-north').addEventListener('click', () => {
+      prefs.mapRotate = !prefs.mapRotate;
+      savePrefs();
+      if (prefs.mapRotate) recenter();
+      else applyMapRotation();
+      toast(prefs.mapRotate ? 'Mappa orientata con la direzione di marcia' : 'Mappa con il nord in alto');
+    });
     $('speed-box').addEventListener('click', toggleSpeedStyle);
     $('speed-box').addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {

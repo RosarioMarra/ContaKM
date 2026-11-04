@@ -20,6 +20,7 @@
     bikeType: 'Hybrid',
     speedStyle: 'digital', // 'digital' oppure 'analog'
     activeBikeId: null,
+    mapRotate: true, // mappa che gira con la direzione di marcia
     weightKg: 75,
     weeklyGoalKm: 50,
     serviceEveryKm: 300,

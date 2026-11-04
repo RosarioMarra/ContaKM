@@ -127,7 +127,9 @@
       </section>
 
       <section id="view-map" class="view" hidden>
-        <div id="map"></div>
+        <div class="map-rot" id="map-rot"><div id="map"></div></div>
+        <div class="map-attr">© OpenStreetMap · OpenFreeMap</div>
+        <button class="icon-btn map-north" id="btn-north" aria-label="Mappa orientata con la direzione di marcia"><svg viewBox="0 0 24 24"><path d="M12 3 16 13H8L12 3Z" class="north-n"/><path d="M12 21 8 13h8l-4 8Z"/></svg></button>
         <button class="search-btn" id="btn-search"><svg><use href="#i-search"/></svg>Dove vai?</button>
         <button class="icon-btn map-locate" id="btn-locate" aria-label="Torna alla mia posizione" hidden><svg><use href="#i-locate"/></svg></button>
 
