@@ -35,6 +35,7 @@
     <symbol id="i-destination" viewBox="0 0 24 24"><path d="M6 22V3M6 4h12l-3 4 3 4H6"/></symbol>
     <symbol id="i-bike" viewBox="0 0 24 24"><circle cx="5.500" cy="16.500" r="3.500"/><circle cx="18.500" cy="16.500" r="3.500"/><path d="M5.500 16.500 9.500 9h6l3 7.500M9.500 9 12 16.500h-1M8 6h3M14 6h2l1.500 3"/></symbol>
     <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0V4ZM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 14v3M8 21h8M9 21l.5-4h5l.5 4"/></symbol>
     <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.200-4 4.300-6 8-6s6.800 2 8 6"/></symbol>
     <symbol id="i-target" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.500"/><path d="m20.500 20.500-4.800-4.800M11 8.500v5M8.500 11h5"/></symbol>
     <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4ZM13.500 6.500l4 4"/></symbol>
@@ -141,6 +142,7 @@
         <div class="preview" id="preview" hidden>
           <div class="preview-title" id="preview-title"></div>
           <div class="preview-info" id="preview-info"></div>
+          <ul class="route-options" id="route-options" hidden></ul>
           <div class="preview-actions">
             <button class="btn btn-stop" id="btn-preview-cancel">Annulla</button>
             <button class="btn btn-primary" id="btn-go">Parti</button>
@@ -160,6 +162,10 @@
           <div class="goal-text" id="goal-text"></div>
           <div class="bar"><div class="bar-fill" id="goal-fill"></div></div>
         </div>
+        <section class="weeks-card" id="weeks-card" hidden>
+          <h3>Ultime 8 settimane</h3>
+          <div class="week-chart" id="weeks-chart"></div>
+        </section>
         <div class="records" id="records" hidden>
           <h2>I tuoi record</h2>
           <div class="stats stats-small">
@@ -310,7 +316,12 @@
       <button class="icon-btn" id="btn-detail-close" aria-label="Chiudi"><svg><use href="#i-close"/></svg></button>
     </div>
     <div id="detail-map"></div>
+    <div class="record-banner" id="detail-record" hidden><svg><use href="#i-trophy"/></svg><span id="detail-record-text"></span></div>
     <div class="stats detail-stats" id="detail-stats"></div>
+    <div class="speed-profile" id="detail-speed" hidden>
+      <div class="sp-head"><span>Velocità durante l'uscita</span><span id="detail-speed-max"></span></div>
+      <div class="sp-chart" id="detail-speed-chart"></div>
+    </div>
     <label class="field field-inline" id="detail-bike-row">
       <span>Bici</span>
       <select id="detail-bike"></select>
@@ -396,6 +407,20 @@
       <button class="btn btn-stop" id="btn-maint-delete">Elimina</button>
       <button class="btn btn-primary" id="btn-maint-save">Salva</button>
     </div>
+  </dialog>
+
+  <dialog id="welcome" class="sheet sheet-small">
+    <div class="welcome-head">
+      <img class="logo" src="icons/logo.svg" alt="">
+      <h2>Benvenuto in ContaKM</h2>
+    </div>
+    <ul class="welcome-list">
+      <li><svg><use href="#i-gauge"/></svg><div><b>Premi Avvia e pedala</b><span>Velocità, km, tempo e media in grande. I km si contano anche a schermo spento.</span></div></li>
+      <li><svg><use href="#i-map"/></svg><div><b>Navigatore per la bici</b><span>Cerca una meta e scegli tra tre percorsi, con le indicazioni a voce.</span></div></li>
+      <li><svg><use href="#i-bike"/></svg><div><b>Le tue bici e la manutenzione</b><span>In Profilo aggiungi le bici, scegli modello e colore e ricevi i promemoria.</span></div></li>
+    </ul>
+    <p class="hint">Niente account obbligatorio: i dati restano sul telefono. Ti chiederemo la posizione solo quando premi Avvia o apri la mappa.</p>
+    <button class="btn btn-primary wide" id="btn-welcome">Inizia</button>
   </dialog>
 
   <div id="toast" class="toast" hidden></div>

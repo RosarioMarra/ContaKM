@@ -220,6 +220,17 @@ h2 { font-size: 20px; font-weight: 800; margin: 18px 0 8px; }
 .preview-title { font-size: 24px; font-weight: 800; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .preview-info { font-size: 20px; font-weight: 600; color: var(--muted); margin: 2px 0 12px; font-variant-numeric: tabular-nums; }
 .preview-actions { display: flex; gap: 8px; }
+/* Percorsi proposti, come le alternative dei navigatori */
+.route-options { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px; }
+.route-option {
+  width: 100%; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 12px; align-items: baseline;
+  padding: 10px 14px; text-align: left; border-radius: 14px; background: var(--surface); border: 2px solid var(--line);
+  transition: border-color .2s, background-color .2s;
+}
+.route-option[aria-pressed="true"] { border-color: #e0218a; background: color-mix(in srgb, #e0218a 12%, var(--surface)); }
+.route-time { grid-row: 1 / 3; font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; align-self: center; }
+.route-sub { font-size: 16px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+.route-tag { grid-column: 2; font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--ok); }
 .preview-actions .btn-primary { flex: 2; }
 
 .leaflet-control-attribution { font-size: 10px; }
@@ -643,27 +654,6 @@ body {
   .dash-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .dash-card { position: relative; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
   .dash-card h3 { margin: 0 0 8px; font-size: 15px; font-weight: 800; }
-  .week-chart { position: relative; }
-  .week-chart svg { width: 100%; height: auto; display: block; overflow: visible; }
-  .week-chart svg, .week-chart svg * { stroke: none; }
-  .week-chart .wk-base { stroke: var(--line); }
-  .wk-base { stroke: var(--line); stroke-width: 1; }
-  .wk-hit { fill: transparent; }
-  .wk-bar { fill: color-mix(in srgb, var(--accent) 55%, var(--surface)); transform-box: fill-box; transform-origin: bottom; animation: rise .7s cubic-bezier(.2, .8, .2, 1) backwards; }
-  .wk-bar.today { fill: var(--accent); }
-  .wk-day:hover .wk-bar { fill: var(--accent); }
-  .wk-day:nth-child(3) .wk-bar { animation-delay: .04s; } .wk-day:nth-child(4) .wk-bar { animation-delay: .08s; }
-  .wk-day:nth-child(5) .wk-bar { animation-delay: .12s; } .wk-day:nth-child(6) .wk-bar { animation-delay: .16s; }
-  .wk-day:nth-child(7) .wk-bar { animation-delay: .2s; } .wk-day:nth-child(8) .wk-bar { animation-delay: .24s; }
-  @keyframes rise { from { transform: scaleY(0); } }
-  .wk-value { fill: var(--ink); font-size: 11px; font-weight: 700; text-anchor: middle; }
-  .wk-label { fill: var(--muted); font-size: 11px; font-weight: 700; text-anchor: middle; }
-  .wk-label.today { fill: var(--ink); }
-  .wk-tip {
-    position: absolute; top: -8px; transform: translate(-50%, -100%); white-space: nowrap; pointer-events: none;
-    padding: 6px 10px; border-radius: 8px; font-size: 13px; font-weight: 700;
-    background: var(--ink); color: var(--bg); box-shadow: 0 6px 16px rgba(0, 0, 0, .3);
-  }
   .dash-maint { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
   .dash-maint li { display: grid; gap: 5px; cursor: pointer; }
   .dash-maint .maint-label { font-size: 15px; font-weight: 700; }
@@ -814,3 +804,70 @@ body {
 #view-ride .speed { container-type: size; }
 #view-ride .speed-value { font-size: min(46vw, 28dvh, 72cqh); }
 #view-ride .speed-unit { font-size: clamp(14px, 9cqh, 24px); }
+
+/* ==========================================================================
+   Grafici: settimane, profilo velocità, record, benvenuto
+   ========================================================================== */
+.week-chart { position: relative; }
+.week-chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.week-chart svg, .week-chart svg * { stroke: none; }
+.week-chart .wk-base { stroke: var(--line); }
+.wk-base { stroke: var(--line); stroke-width: 1; }
+.wk-hit { fill: transparent; }
+.wk-bar { fill: color-mix(in srgb, var(--accent) 55%, var(--surface)); transform-box: fill-box; transform-origin: bottom; animation: rise .7s cubic-bezier(.2, .8, .2, 1) backwards; }
+.wk-bar.today { fill: var(--accent); }
+.wk-day:hover .wk-bar { fill: var(--accent); }
+.wk-day:nth-child(3) .wk-bar { animation-delay: .04s; } .wk-day:nth-child(4) .wk-bar { animation-delay: .08s; }
+.wk-day:nth-child(5) .wk-bar { animation-delay: .12s; } .wk-day:nth-child(6) .wk-bar { animation-delay: .16s; }
+.wk-day:nth-child(7) .wk-bar { animation-delay: .2s; } .wk-day:nth-child(8) .wk-bar { animation-delay: .24s; }
+@keyframes rise { from { transform: scaleY(0); } }
+.wk-value { fill: var(--ink); font-size: 11px; font-weight: 700; text-anchor: middle; }
+.wk-label { fill: var(--muted); font-size: 11px; font-weight: 700; text-anchor: middle; }
+.wk-label.today { fill: var(--ink); }
+.wk-tip {
+  position: absolute; top: -8px; transform: translate(-50%, -100%); white-space: nowrap; pointer-events: none;
+  padding: 6px 10px; border-radius: 8px; font-size: 13px; font-weight: 700;
+  background: var(--ink); color: var(--bg); box-shadow: 0 6px 16px rgba(0, 0, 0, .3);
+}
+
+.wk-tip[hidden] { display: none; }
+.weeks-card { margin-top: 14px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
+.weeks-card h3 { margin: 0 0 10px; font-size: 15px; font-weight: 800; }
+
+.record-banner {
+  display: flex; align-items: center; gap: 10px; margin: 12px 0 0; padding: 10px 14px; border-radius: 14px;
+  font-weight: 700; color: #3b2a00;
+  background: linear-gradient(135deg, #ffd65a, #f5b400);
+  box-shadow: 0 8px 22px -10px rgba(245, 180, 0, .7);
+  animation: pop-in .5s cubic-bezier(.2, 1.4, .4, 1) backwards;
+}
+.record-banner svg { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; }
+@keyframes pop-in { from { opacity: 0; transform: scale(.85); } }
+
+.speed-profile { margin-top: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
+.sp-head { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 8px; font-size: 14px; font-weight: 700; }
+.sp-head span:last-child { color: var(--muted); font-weight: 600; font-size: 13px; }
+.sp-chart { position: relative; }
+.sp-chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.sp-chart .wk-base { stroke: var(--line); }
+.sp-area { fill: color-mix(in srgb, var(--accent) 22%, transparent); stroke: none; }
+.sp-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.sp-avg { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; }
+.sp-chart .wk-hit { stroke: none; }
+
+.welcome-head { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; margin-bottom: 8px; }
+.welcome-head .logo { width: 64px; height: 64px; animation: pop-in .6s cubic-bezier(.2, 1.4, .4, 1) backwards; }
+.welcome-head h2 { margin: 0; }
+.welcome-list { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 14px; }
+.welcome-list li { display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: start; animation: tile-in .5s backwards; }
+.welcome-list li:nth-child(2) { animation-delay: .08s; }
+.welcome-list li:nth-child(3) { animation-delay: .16s; }
+.welcome-list svg { width: 40px; height: 40px; padding: 9px; border-radius: 12px; fill: none; stroke: var(--accent); stroke-width: 2; background: color-mix(in srgb, var(--accent) 14%, transparent); box-sizing: border-box; }
+.welcome-list b { display: block; margin-bottom: 2px; }
+.welcome-list span { color: var(--muted); font-size: 14px; }
+.sp-chart svg text { stroke: none; }
+.sp-chart .sp-start { text-anchor: start; }
+.sp-chart .sp-end { text-anchor: end; }
+.sp-head span:first-child { white-space: nowrap; }
+.welcome-list + .hint { font-size: 14px; }
+.sp-head { flex-wrap: wrap; } .sp-head span:last-child { white-space: nowrap; }

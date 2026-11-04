@@ -39,6 +39,51 @@
     };
   }
 
+  /** Record battuti da un'uscita rispetto alle precedenti (serve almeno un'uscita prima). */
+  function newRecords(previous, r) {
+    if (!previous.length) return [];
+    const s = summarize(previous);
+    const avg = r.movingMs > 0 ? r.distanceM / (r.movingMs / 1000) : 0;
+    const out = [];
+    if (r.distanceM > s.longestM) out.push('uscita più lunga');
+    if (r.distanceM >= 2000 && avg > s.bestAvgMs) out.push('media più alta');
+    if (r.maxSpeedMs > s.topSpeedMs) out.push('velocità massima');
+    return out;
+  }
+
+  /** Km delle ultime n settimane (da lunedì), dalla più vecchia a quella in corso. */
+  function weeklyTotals(history, now = Date.now(), n = 8) {
+    const weekMs = 7 * 864e5;
+    const current = startOfWeek(now);
+    return Array.from({ length: n }, (_, i) => {
+      const start = current - (n - 1 - i) * weekMs;
+      const end = start + weekMs;
+      const m = history.filter((r) => r.startedAt >= start && r.startedAt < end).reduce((t, r) => t + r.distanceM, 0);
+      return { start, km: m / 1000 };
+    });
+  }
+
+  /**
+   * Profilo della velocità di un'uscita dai punti registrati ([lat, lon, secondi]):
+   * velocità tra un punto e l'altro, smussata, solo dentro i tratti senza interruzioni.
+   */
+  function speedProfile(track, segmentsOf, distance) {
+    const points = [];
+    for (const seg of segmentsOf(track)) {
+      for (let i = 1; i < seg.length; i++) {
+        const dt = seg[i][2] - seg[i - 1][2];
+        if (dt <= 0) continue;
+        const d = distance({ lat: seg[i - 1][0], lon: seg[i - 1][1] }, { lat: seg[i][0], lon: seg[i][1] });
+        points.push({ t: seg[i][2], kmh: (d / dt) * 3.6 });
+      }
+    }
+    // Media mobile su 5 punti: toglie il tremolio del GPS senza cancellare le salite e le frenate
+    return points.map((p, i) => {
+      const win = points.slice(Math.max(0, i - 2), i + 3);
+      return { t: p.t, kmh: win.reduce((s, q) => s + q.kmh, 0) / win.length };
+    });
+  }
+
   globalThis.ContaKM ??= {};
-  Object.assign(globalThis.ContaKM, { caloriesFor, startOfWeek, summarize });
+  Object.assign(globalThis.ContaKM, { caloriesFor, startOfWeek, summarize, newRecords, weeklyTotals, speedProfile });
 })();
