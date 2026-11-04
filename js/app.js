@@ -17,8 +17,6 @@
   const REROUTE_COOLDOWN_MS = 20000;
   const UNLOCK_HOLD_MS = 1000;  const ROUTE_COLOR = '#e0218a';
   const CYCLEWAY_COLOR = '#0b9a4b';
-  const WECITY_PLAY_URL = 'https://play.google.com/store/apps/details?id=it.wecity.app3';
-  const WECITY_IOS_URL = 'https://apps.apple.com/it/app/wecity/id655647085';
 
   const ACCENTS = [
     { value: 'blue', label: 'Azzurro' },
@@ -269,6 +267,7 @@
     root.dataset.moving = riding ? '1' : '';
     // Da ferma, al posto dello "0" c'è la bici 3D; con Avvia torna la velocità.
     $('speed-box').dataset.bike = homeBike && ride.state === 'idle' && !desktop.matches ? '1' : '';
+    $('panel-mini').textContent = `${km(ride.distanceM)} km · ${duration(ride.movingMs)} · ${kmh(ride.avgSpeedMs)} km/h`;
   }
 
   function render() {
@@ -295,8 +294,6 @@
     $('btn-pause').hidden = ride.state !== 'running';
     $('btn-resume').hidden = ride.state !== 'paused';
     $('btn-finish').hidden = ride.state !== 'paused';
-    // Solo prima di partire: passando a un'altra app il browser sospende il GPS di ContaKM.
-    $('btn-wecity').hidden = !prefs.wecity || ride.state !== 'idle';
     renderGps();
     renderMotion();
     const kmStep = Math.floor(ride.distanceM / 1000);
@@ -359,17 +356,17 @@
     $('gauge-value').textContent = String(Math.round(speedKmh));
   }
 
-  function applySpeedStyle() {
-    const analog = prefs.speedStyle === 'analog';
-    $('speed').hidden = analog;
-    $('gauge').toggleAttribute('hidden', !analog); // su un svg la proprietà hidden non esiste
-  }
-
   /** Come sul cruscotto di un'auto: all'accensione la lancetta va a fondo scala e torna. */
   function sweepGauge() {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     renderGauge(GAUGE_MAX_KMH);
     setTimeout(() => renderGauge(ride.speedMs * 3.6), 450);
+  }
+
+  function applySpeedStyle() {
+    const analog = prefs.speedStyle === 'analog';
+    $('speed').hidden = analog;
+    $('gauge').toggleAttribute('hidden', !analog); // su un svg la proprietà hidden non esiste
   }
 
   function toggleSpeedStyle() {
@@ -379,19 +376,23 @@
     if (prefs.speedStyle === 'analog') sweepGauge();
   }
 
+  /** Pannello in basso: completo o ridotto a una riga, per lasciare spazio a strumenti e bici. */
+  function applyPanel() {
+    const collapsed = Boolean(prefs.panelCollapsed);
+    $('ride-panel').dataset.collapsed = collapsed ? '1' : '';
+    $('panel-toggle').setAttribute('aria-expanded', String(!collapsed));
+    $('panel-toggle-text').textContent = collapsed ? 'Mostra dati' : 'Riduci';
+  }
+
+  function togglePanel() {
+    prefs.panelCollapsed = !prefs.panelCollapsed;
+    savePrefs();
+    applyPanel();
+  }
+
   /** Km totali in home: uscite salvate più quella in corso, così crescono mentre pedali. */
   function renderTotal() {
     $('stat-total').textContent = number((historyM + ride.distanceM) / 1000, 1);
-  }
-
-  /** Android apre l'app se c'è, altrimenti Google Play; iPhone arriva all'App Store. */
-  function wecityLink() {
-    const ua = navigator.userAgent;
-    if (/Android/i.test(ua)) {
-      const fallback = encodeURIComponent(WECITY_PLAY_URL);
-      return `intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=it.wecity.app3;S.browser_fallback_url=${fallback};end`;
-    }
-    return /iPhone|iPad/i.test(ua) ? WECITY_IOS_URL : WECITY_PLAY_URL;
   }
 
   function applyPrefs() {
@@ -402,6 +403,8 @@
     if (native.isNative) native.statusBar(prefs.sun);
     $('btn-sun').setAttribute('aria-pressed', prefs.sun);
     $('btn-voice').setAttribute('aria-pressed', prefs.voice);
+    $('set-voice')?.setAttribute('aria-pressed', prefs.voice);
+    $('set-sun')?.setAttribute('aria-pressed', prefs.sun);
     $('btn-voice').querySelector('use').setAttribute('href', prefs.voice ? '#i-voice' : '#i-voice-off');
     paintBike3d();
   }
@@ -977,7 +980,29 @@ ${segments}
     saveFile(`contakm-${new Date(r.startedAt).toISOString().slice(0, 10)}.gpx`, gpx, 'application/gpx+xml');
   }
 
-  // ---------- Altro: impostazioni e strumenti ----------
+  // ---------- Profilo: account, statistiche e preferenze ----------
+
+  let accountUser = null;
+
+  function renderProfile() {
+    const history = store.loadHistory();
+    const s = summarize(history);
+    const name = prefs.displayName || accountUser?.name || 'Ciclista';
+    $('profile-name').textContent = name;
+    $('profile-mail').textContent = accountUser ? accountUser.email : 'Dati solo su questo telefono';
+    $('profile-initials').textContent = name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || 'C';
+    const photo = $('profile-photo');
+    if (accountUser?.photo && photo.getAttribute('src') !== accountUser.photo) photo.src = accountUser.photo;
+    photo.hidden = !accountUser?.photo;
+    $('profile-km').textContent = number(s.totalM / 1000, 0);
+    $('profile-rides').textContent = String(s.rides);
+    $('profile-bikes').textContent = String(bikeList.length);
+    $('pref-sync-hint').textContent = accountUser
+      ? 'Le preferenze sono salvate nel tuo account e ti seguono su ogni telefono.'
+      : 'Con l\'accesso le preferenze ti seguono su ogni telefono.';
+  }
+
+  // ---------- Profilo: impostazioni e strumenti ----------
 
   function savePrefs() {
     store.savePrefs(prefs);
@@ -1072,15 +1097,14 @@ ${segments}
   function setupSettings() {
     setupSegmented('set-accent', ACCENTS, 'accent');
     setupSegmented('set-km-alert', KM_ALERTS, 'kmAlert');
-    setupToggle('set-wecity', 'wecity');
-    $('set-wecity').addEventListener('click', render);
-    $('btn-wecity').href = wecityLink();
-    if (native.isNative) {
-      $('btn-wecity').addEventListener('click', (e) => {
-        e.preventDefault();
-        native.openApp('it.wecity.app3', WECITY_PLAY_URL);
-      });
-    }
+    setupToggle('set-voice', 'voice');
+    setupToggle('set-sun', 'sun');
+    $('set-name').value = prefs.displayName || '';
+    $('set-name').addEventListener('change', (e) => {
+      prefs.displayName = e.target.value.trim();
+      savePrefs();
+      renderProfile();
+    });
     setupStepper('set-weight', 'weightKg', 1, 30, 200, render);
     setupStepper('set-goal', 'weeklyGoalKm', 10, 0, 1000);
     $('btn-share').addEventListener('click', sharePosition);
@@ -1132,7 +1156,7 @@ ${segments}
     if (!view || !b) return;
     view.setStyle(bikeLib.frameOf(b));
     view.setColor(bikeLib.colorOf(b, accentColor()));
-    view.setElectric(b.electric);
+    view.setElectric(bikeLib.isElectric(b));
   }
 
   function ensureGarage() {
@@ -1179,20 +1203,31 @@ ${segments}
   }
 
   function setupLookPickers() {
-    $('bike-frame').replaceChildren(...bikeLib.FRAME_STYLES.map((f) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.textContent = f.label;
-      btn.dataset.value = f.value;
-      btn.addEventListener('click', () => {
-        const b = findBike(editingBikeId);
-        b.frame = f.value;
-        saveBikes();
-        applyLook(garage, b);
-        garage?.reset();
-        resetGarageCaption();
-      });
-      return btn;
+    const groups = [...new Set(bikeLib.FRAME_STYLES.map((f) => f.group))];
+    $('bike-frame').replaceChildren(...groups.flatMap((group) => {
+      const title = textBlock('chips-title', group);
+      const chips = document.createElement('div');
+      chips.className = 'chips';
+      chips.append(...bikeLib.FRAME_STYLES.filter((f) => f.group === group).map((f) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'chip';
+        btn.textContent = f.label;
+        btn.dataset.value = f.value;
+        btn.addEventListener('click', () => {
+          const b = findBike(editingBikeId);
+          b.frame = f.value;
+          // Un modello elettrico rende elettrica la bici (voce batteria e motore nella manutenzione).
+          if (bikeLib.isEFrame(f.value)) b.electric = true;
+          $('bike-electric').setAttribute('aria-pressed', b.electric);
+          saveBikes();
+          applyLook(garage, b);
+          garage?.reset();
+          resetGarageCaption();
+        });
+        return btn;
+      }));
+      return [title, chips];
     }));
     const swatches = bikeLib.BIKE_COLORS.map((c) => {
       const btn = document.createElement('button');
@@ -1396,6 +1431,7 @@ ${segments}
   function renderBikeList() {
     const history = store.loadHistory();
     $('bike-list').replaceChildren(...bikeList.map((b) => bikeRow(b, history, () => openBike(b.id))));
+    if (!$('view-more').hidden) renderProfile();
   }
 
   function setActiveBike(id) {
@@ -1738,16 +1774,21 @@ ${segments}
       updateMapPosition(!riderMarker);
     }
     if (name === 'history') renderHistory();
-    if (name === 'more') renderBikeList();
+    if (name === 'more') {
+      renderBikeList();
+      renderProfile();
+    }
   }
 
   // ---------- Avvio ----------
 
   function startRide() {
+    const firstStart = ride.state === 'idle';
     startGps();
     ride.start();
     updateScreenLock();
     render();
+    if (firstStart && prefs.speedStyle === 'analog') setTimeout(sweepGauge, 250);
   }
 
   function bindEvents() {
@@ -1770,6 +1811,7 @@ ${segments}
       render();
     });
     $('btn-finish').addEventListener('click', finishRide);
+    $('panel-toggle').addEventListener('click', togglePanel);
     $('speed-box').addEventListener('click', toggleSpeedStyle);
     $('speed-box').addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
@@ -1815,6 +1857,7 @@ ${segments}
   if (!findBike(prefs.activeBikeId)) prefs.activeBikeId = bikeList[0].id;
   buildGauge();
   applySpeedStyle();
+  applyPanel();
   if (prefs.speedStyle === 'analog') setTimeout(sweepGauge, 300);
   setupBikes();
   renderBikePick();
@@ -1828,13 +1871,19 @@ ${segments}
   // Dati arrivati da un altro telefono: si ridisegna tutto quello che li mostra.
   cloud.init({
     toast,
+    onUser(user) {
+      accountUser = user;
+      renderProfile();
+    },
     onPulled() {
       bikeList = store.loadBikes();
       Object.assign(prefs, store.loadPrefs());
       if (!findBike(prefs.activeBikeId)) prefs.activeBikeId = bikeList[0]?.id;
       applyPrefs();
+      $('set-name').value = prefs.displayName || '';
       renderHistory();
       renderBikes();
+      renderProfile();
     },
   });
   setupMic();

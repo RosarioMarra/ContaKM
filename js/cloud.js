@@ -24,20 +24,36 @@
   function render() {
     const text = $('account-text');
     if (!client) {
-      $('account').hidden = true;
+      $('btn-login').hidden = true;
+      text.textContent = '';
       return;
     }
     $('btn-login').hidden = Boolean(user);
-    for (const id of ['btn-sync', 'btn-logout', 'btn-delete-account']) $(id).hidden = !user;
+    for (const id of ['btn-sync', 'btn-logout']) $(id).hidden = !user;
+    $('danger-zone').hidden = !user;
+    $('account').dataset.signedIn = user ? '1' : '';
+    options.onUser?.(user ? {
+      email: user.email,
+      name: user.user_metadata?.full_name || user.user_metadata?.name || '',
+      photo: user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
+    } : null);
     if (!user) {
-      text.textContent = 'Accedi con Google per salvare uscite, bici e impostazioni anche online e ritrovarle su un altro telefono. Senza accesso tutto resta solo su questo telefono.';
+      text.textContent = 'Accedi con Google per salvare uscite, bici e preferenze anche online e ritrovarle su un altro telefono.';
+      text.dataset.state = '';
       return;
     }
     let status = 'Sincronizzazione in attesa…';
+    let state = 'wait';
     if (running) status = 'Sincronizzazione in corso…';
-    else if (lastError) status = navigator.onLine ? 'Sincronizzazione non riuscita: riprovo da solo.' : 'Sei offline: sincronizzo appena torna internet.';
-    else if (lastSyncAt) status = `Tutto salvato online alle ${timeOf(lastSyncAt)}.`;
-    text.textContent = `Accesso come ${user.email}. ${status}`;
+    else if (lastError) {
+      status = navigator.onLine ? 'Sincronizzazione non riuscita: riprovo da solo.' : 'Sei offline: sincronizzo appena torna internet.';
+      state = 'error';
+    } else if (lastSyncAt) {
+      status = `Tutto salvato online alle ${timeOf(lastSyncAt)}`;
+      state = 'ok';
+    }
+    text.textContent = status;
+    text.dataset.state = state;
   }
 
   function syncSoon(delay = SYNC_DELAY_MS) {

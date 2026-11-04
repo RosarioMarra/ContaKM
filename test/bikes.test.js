@@ -115,3 +115,15 @@ test('ogni voce di manutenzione sa su quale pezzo zoomare', () => {
   assert.equal(bikes.partFor({ label: 'Cambio sella' }), 'saddle');
   assert.equal(bikes.partFor({ label: 'Lavaggio' }), 'all');
 });
+
+test('modelli elettrici: dedotti dal tipo e con la voce batteria', () => {
+  const b = bikes.createBike({ type: 'City', electric: true }, NOW);
+  assert.equal(bikes.frameOf(b), 'e-city');
+  assert.equal(bikes.frameOf({ ...b, type: 'Mountain' }), 'e-mtb');
+  const muscolare = bikes.createBike({ type: 'Road' }, NOW);
+  assert.equal(bikes.isElectric(muscolare), false);
+  muscolare.frame = 'e-cargo';
+  assert.equal(bikes.isElectric(muscolare), true, 'scegliere un modello elettrico la rende elettrica');
+  assert.ok(bikes.visibleItems(muscolare).some((i) => i.key === 'battery'));
+  assert.ok(bikes.FRAME_STYLES.filter((f) => f.group === 'Elettriche').length >= 7);
+});

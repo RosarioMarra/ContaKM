@@ -9,7 +9,6 @@
 
   const KeepAwake = plugin('KeepAwake');
   const TextToSpeech = plugin('TextToSpeech');
-  const AppLauncher = plugin('AppLauncher');
   const Filesystem = plugin('Filesystem');
   const Share = plugin('Share');
   const BackgroundGeolocation = plugin('BackgroundGeolocation');
@@ -66,15 +65,6 @@
 
     keepAwake(on) {
       return (on ? KeepAwake.keepAwake() : KeepAwake.allowSleep()).catch(() => {});
-    },
-
-    /** Apre un'altra app dal suo nome di pacchetto; se manca apre la sua pagina sul Play Store. */
-    async openApp(packageName, storeUrl) {
-      try {
-        const { completed } = await AppLauncher.openUrl({ url: packageName });
-        if (completed) return;
-      } catch { /* app non installata */ }
-      await AppLauncher.openUrl({ url: storeUrl }).catch(() => {});
     },
 
     /** Salva il file nella cache dell'app e apre il menu Condividi (Drive, email, File…). */
