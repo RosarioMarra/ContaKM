@@ -63,20 +63,15 @@
       language: 'it-IT',
       units: 'kilometers',
     };
+    if (options.alternates) body.alternates = options.alternates;
     const res = await fetch(`${VALHALLA_URL}?json=${encodeURIComponent(JSON.stringify(body))}`);
     if (!res.ok) throw new Error(`Percorso non trovato (${res.status})`);
-    return (await res.json()).trip;
+    const data = await res.json();
+    // Il percorso principale più le eventuali alternative
+    return [data.trip, ...(data.alternates || []).map((a) => a.trip)];
   }
 
-  async function fetchRoute(from, to, options = {}) {
-    let trip;
-    try {
-      trip = await requestRoute(from, to, options, options.heading);
-    } catch (err) {
-      // La direzione di marcia può far scartare tutte le strade vicine: si riprova senza.
-      if (options.heading == null) throw err;
-      trip = await requestRoute(from, to, options, null);
-    }
+  function parseTrip(trip) {
     const leg = trip.legs[0];
     return {
       coords: decodePolyline6(leg.shape),
@@ -90,6 +85,38 @@
         index: m.begin_shape_index,
       })),
     };
+  }
+
+  /**
+   * Fino a tre percorsi diversi verso la meta (il più breve più due alternative), dal più veloce.
+   * Le alternative quasi uguali a un percorso già in elenco vengono scartate.
+   */
+  async function fetchRoutes(from, to, options = {}) {
+    let trips;
+    try {
+      trips = await requestRoute(from, to, { ...options, alternates: 2 }, options.heading);
+    } catch (err) {
+      if (options.heading == null) throw err;
+      trips = await requestRoute(from, to, { ...options, alternates: 2 }, null);
+    }
+    const routes = [];
+    for (const r of trips.map(parseTrip)) {
+      const same = routes.some((o) => Math.abs(o.distanceM - r.distanceM) < 30 && Math.abs(o.timeS - r.timeS) < 30);
+      if (!same) routes.push(r);
+    }
+    return routes.sort((a, b) => a.timeS - b.timeS);
+  }
+
+  async function fetchRoute(from, to, options = {}) {
+    let trips;
+    try {
+      trips = await requestRoute(from, to, options, options.heading);
+    } catch (err) {
+      // La direzione di marcia può far scartare tutte le strade vicine: si riprova senza.
+      if (options.heading == null) throw err;
+      trips = await requestRoute(from, to, options, null);
+    }
+    return parseTrip(trips[0]);
   }
 
   /** Segue il ciclista lungo un percorso e dice cosa mostrare e cosa annunciare. */
@@ -185,5 +212,5 @@
     return 'arrow';
   }
 
-  Object.assign(globalThis.ContaKM, { searchPlaces, fetchRoute, NavSession, arrowAngle, maneuverIcon });
+  Object.assign(globalThis.ContaKM, { searchPlaces, fetchRoute, fetchRoutes, NavSession, arrowAngle, maneuverIcon });
 })();
