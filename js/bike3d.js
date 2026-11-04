@@ -297,7 +297,7 @@
     const x = c.getContext('2d');
     const radius = (size / 2) * ratio;
     x.fillStyle = 'rgba(214, 220, 228, 0.62)';
-    x.font = '800 30px Inter, Arial, sans-serif';
+    x.font = '700 21px Inter, Arial, sans-serif';
     x.textAlign = 'center';
     x.textBaseline = 'middle';
     for (const start of [0, Math.PI]) {
