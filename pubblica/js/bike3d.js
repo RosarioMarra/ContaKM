@@ -33,17 +33,17 @@
     bar: 'flat', fork: 'rigid', top: 'straight',
   };
   const STYLES = {
-    classic: { ...BASE },
-    city: { ...BASE, seat: [-0.17, 0.8], head: [0.36, 0.9], headLow: [0.41, 0.72], tire: 0.03, bar: 'riser', top: 'low', saddleY: 0.97, fenders: true, rack: true, lamp: true, chainguard: true },
-    mtb: { ...BASE, seat: [-0.15, 0.76], head: [0.4, 0.86], headLow: [0.45, 0.66], tube: 0.03, tire: 0.042, bar: 'wide', fork: 'suspension', top: 'sloped', saddleY: 0.97, knobby: true },
-    road: { ...BASE, seat: [-0.17, 0.86], head: [0.4, 0.85], headLow: [0.43, 0.72], tube: 0.02, tire: 0.018, bar: 'drop', saddleY: 1.01 },
+    classic: { ...BASE, kickstand: true, bottle: true },
+    city: { ...BASE, seat: [-0.17, 0.8], head: [0.36, 0.9], headLow: [0.41, 0.72], tire: 0.03, bar: 'riser', top: 'low', saddleY: 0.97, fenders: true, rack: true, lamp: true, chainguard: true, tanwall: true, kickstand: true, comfort: true },
+    mtb: { ...BASE, seat: [-0.15, 0.76], head: [0.4, 0.86], headLow: [0.45, 0.66], tube: 0.03, tire: 0.042, bar: 'wide', fork: 'suspension', top: 'sloped', saddleY: 0.97, knobby: true, bottle: true },
+    road: { ...BASE, seat: [-0.17, 0.86], head: [0.4, 0.85], headLow: [0.43, 0.72], tube: 0.02, tire: 0.018, bar: 'drop', saddleY: 1.01, bottle: true },
 
-    'e-city': { ...BASE, seat: [-0.17, 0.8], head: [0.36, 0.9], headLow: [0.41, 0.72], tire: 0.032, bar: 'riser', top: 'low', saddleY: 0.97, fenders: true, rack: true, lamp: true, chainguard: true, battery: 'rack', motor: 'mid', display: true, tailLight: true },
-    'e-trekking': { ...BASE, seat: [-0.16, 0.8], head: [0.39, 0.88], headLow: [0.43, 0.7], tube: 0.027, tire: 0.031, fork: 'suspension', top: 'sloped', saddleY: 0.98, fenders: true, rack: true, lamp: true, battery: 'integrated', motor: 'mid', display: true, tailLight: true },
+    'e-city': { ...BASE, seat: [-0.17, 0.8], head: [0.36, 0.9], headLow: [0.41, 0.72], tire: 0.032, bar: 'riser', top: 'low', saddleY: 0.97, fenders: true, rack: true, lamp: true, chainguard: true, battery: 'rack', motor: 'mid', display: true, tailLight: true, tanwall: true, kickstand: true, comfort: true },
+    'e-trekking': { ...BASE, seat: [-0.16, 0.8], head: [0.39, 0.88], headLow: [0.43, 0.7], tube: 0.027, tire: 0.031, fork: 'suspension', top: 'sloped', saddleY: 0.98, fenders: true, rack: true, lamp: true, battery: 'integrated', motor: 'mid', display: true, tailLight: true, kickstand: true },
     'e-mtb': { ...BASE, seat: [-0.15, 0.76], head: [0.41, 0.86], headLow: [0.46, 0.66], tube: 0.034, tire: 0.047, bar: 'wide', fork: 'suspension', top: 'sloped', saddleY: 0.97, knobby: true, battery: 'integrated', motor: 'mid', display: true, rearShock: true },
-    'e-gravel': { ...BASE, seat: [-0.17, 0.85], head: [0.4, 0.84], headLow: [0.43, 0.71], tube: 0.026, tire: 0.024, bar: 'drop', saddleY: 1.0, battery: 'integrated', motor: 'mid', motorSize: 0.8 },
-    'e-cargo': { ...BASE, rear: -0.95, rearR: 0.26, tire: 0.032, seat: [-0.2, 0.8], head: [0.38, 0.88], headLow: [0.42, 0.7], tube: 0.03, top: 'sloped', saddleY: 0.97, longtail: true, fenders: true, lamp: true, battery: 'integrated', motor: 'mid', display: true, tailLight: true, bar: 'riser' },
-    'e-folding': { ...BASE, R: 0.25, tire: 0.034, rear: -0.42, front: 0.44, bb: [-0.03, 0.26], seat: [-0.12, 0.5], head: [0.33, 0.66], headLow: [0.31, 0.5], tube: 0.032, top: 'fold', saddleY: 0.95, battery: 'integrated', motor: 'hub', fenders: true, lamp: true, tailLight: true },
+    'e-gravel': { ...BASE, seat: [-0.17, 0.85], head: [0.4, 0.84], headLow: [0.43, 0.71], tube: 0.026, tire: 0.024, bar: 'drop', saddleY: 1.0, battery: 'integrated', motor: 'mid', motorSize: 0.8, tanwall: true, bottle: true },
+    'e-cargo': { ...BASE, rear: -0.95, rearR: 0.26, tire: 0.032, seat: [-0.2, 0.8], head: [0.38, 0.88], headLow: [0.42, 0.7], tube: 0.03, top: 'sloped', saddleY: 0.97, longtail: true, fenders: true, lamp: true, battery: 'integrated', motor: 'mid', display: true, tailLight: true, bar: 'riser', kickstand: true, comfort: true },
+    'e-folding': { ...BASE, R: 0.25, tire: 0.034, rear: -0.42, front: 0.44, bb: [-0.03, 0.26], seat: [-0.12, 0.5], head: [0.33, 0.66], headLow: [0.31, 0.5], tube: 0.032, top: 'fold', saddleY: 0.95, battery: 'integrated', motor: 'hub', fenders: true, lamp: true, tailLight: true, kickstand: true },
     'e-fat': { ...BASE, R: 0.32, tire: 0.075, rear: -0.57, front: 0.6, bb: [-0.04, 0.33], seat: [-0.16, 0.82], head: [0.41, 0.9], headLow: [0.46, 0.72], forkZ: 0.095, tube: 0.032, bar: 'wide', top: 'sloped', saddleY: 0.99, knobby: true, battery: 'integrated', motor: 'hub', display: true, lamp: true },
   };
   const LIFT = -0.5; // la scena ha il centro a metà altezza: il suolo è a y = -0,5
@@ -78,7 +78,8 @@
     const std = (c, metalness, roughness) => new THREE.MeshStandardMaterial({ color: c, metalness, roughness });
     const glow = (c, i) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: i });
     return {
-      frame: std(color, 0.45, 0.32),
+      // Vernice con trasparente lucido sopra, come un telaio vero
+      frame: new THREE.MeshPhysicalMaterial({ color, metalness: 0.35, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.08 }),
       metal: std(0xc8d0d8, 0.9, 0.25),
       spoke: std(0xaab4bf, 0.8, 0.35),
       dark: std(0x23282f, 0.2, 0.6),
@@ -93,6 +94,10 @@
       bar: std(0xc8d0d8, 0.9, 0.25),
       bell: std(0xe8ecf0, 1, 0.15),
       spring: std(0xff7a1a, 0.6, 0.3),
+      tan: std(0xb98a5a, 0, 0.8),
+      cable: std(0x15181c, 0.1, 0.5),
+      rubber: std(0x2b3036, 0, 0.9),
+      bottle: new THREE.MeshPhysicalMaterial({ color: 0xe9eef3, roughness: 0.35, transmission: 0.25, thickness: 0.02 }),
       lamp: glow(0xfff3c4, 0.9),
       tail: glow(0xff3b3b, 0.9),
       screen: glow(0x38bdf8, 0.7),
@@ -123,13 +128,30 @@
         parts.tyres.push(k);
       }
     }
+    if (S.tanwall) {
+      // Fianco color cuoio, tipico delle gomme da città e gravel
+      const wall = new THREE.Mesh(new THREE.TorusGeometry(R - S.tire * 0.55, S.tire * 0.5, 10, 72), mat.tan);
+      g.add(wall);
+      parts.tyres.push(wall);
+    }
+    // Raggi incrociati come nelle ruote vere: partono dalle flange del mozzo e arrivano al cerchio di sbieco.
     const spokeR = R - S.tire - 0.012;
-    const spokes = R < 0.3 ? 16 : 20;
+    const spokes = R < 0.3 ? 28 : 32;
+    const flangeZ = S.forkZ * 0.75;
+    for (const z of [-flangeZ, flangeZ]) {
+      const flange = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.004, 20), mat.metal);
+      flange.rotation.x = Math.PI / 2;
+      flange.position.z = z;
+      g.add(flange);
+    }
     for (let i = 0; i < spokes; i++) {
       const a = (i / spokes) * Math.PI * 2;
-      const z = i % 2 ? S.forkZ * 0.8 : -S.forkZ * 0.8;
-      g.add(tube([0, 0, z], [Math.cos(a) * spokeR, Math.sin(a) * spokeR, 0], 0.0032, mat.spoke, 5));
+      const z = i % 2 ? flangeZ : -flangeZ;
+      const cross = (i % 4 < 2 ? 1 : -1) * 0.38;
+      g.add(tube([Math.cos(a) * 0.028, Math.sin(a) * 0.028, z], [Math.cos(a + cross) * spokeR, Math.sin(a + cross) * spokeR, 0], 0.0022, mat.spoke, 4));
     }
+    const valve = tube([0, -(R - S.tire - 0.02), 0], [0, -(R - S.tire - 0.055), 0], 0.004, mat.metal, 6);
+    g.add(valve);
     // Disco del freno a sinistra
     const rotorR = R < 0.3 ? 0.07 : 0.08;
     const rotor = new THREE.Mesh(new THREE.CylinderGeometry(rotorR, rotorR, 0.004, 40), mat.brake);
@@ -261,10 +283,21 @@
     // ---- Sella ----
     const saddleX = seat.x - 0.04;
     bike.add(tube(seat, v3([saddleX, S.saddleY - 0.03]), S.top === 'fold' ? 0.017 : 0.014, mat.metal));
-    const saddle = new THREE.Mesh(new THREE.CapsuleGeometry(0.045, S.top === 'low' ? 0.12 : 0.16, 6, 12), mat.saddle);
-    saddle.rotation.z = Math.PI / 2;
-    saddle.scale.set(1, 1, S.top === 'low' || S.longtail ? 0.85 : 0.55);
-    saddle.position.set(saddleX - 0.01, S.saddleY, 0);
+    // Sella vera: punta stretta, dietro larga (più larga sulle bici da passeggio), imbottitura arrotondata.
+    const outline = new THREE.Shape();
+    const wBack = S.comfort ? 0.1 : 0.07;
+    outline.moveTo(0.13, 0);
+    outline.bezierCurveTo(0.13, 0.022, 0.05, 0.024, 0, 0.03);
+    outline.bezierCurveTo(-0.06, 0.04, -0.12, wBack, -0.13, wBack * 0.55);
+    outline.bezierCurveTo(-0.14, 0, -0.14, 0, -0.14, 0);
+    outline.bezierCurveTo(-0.14, 0, -0.14, 0, -0.13, -wBack * 0.55);
+    outline.bezierCurveTo(-0.12, -wBack, -0.06, -0.04, 0, -0.03);
+    outline.bezierCurveTo(0.05, -0.024, 0.13, -0.022, 0.13, 0);
+    const saddleGeo = new THREE.ExtrudeGeometry(outline, { depth: 0.018, bevelEnabled: true, bevelThickness: 0.014, bevelSize: 0.012, bevelSegments: 4, curveSegments: 16 });
+    saddleGeo.rotateX(-Math.PI / 2);
+    const saddle = new THREE.Mesh(saddleGeo, mat.saddle);
+    saddle.position.set(saddleX - 0.005, S.saddleY - 0.02, 0);
+    saddle.rotation.z = 0.04;
     bike.add(saddle);
     parts.saddle.push(saddle);
 
@@ -304,15 +337,36 @@
     // ---- Trasmissione e motore ----
     const crank = new THREE.Group();
     crank.position.copy(bb);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(S.motor === 'mid' ? 0.085 : 0.1, 0.011, 8, 44), mat.chain);
-    ring.position.z = 0.06 + (S.motor === 'mid' ? 0.02 : 0);
+    const ringRadius = S.motor === 'mid' ? 0.085 : 0.1;
+    const ringZ = 0.06 + (S.motor === 'mid' ? 0.02 : 0);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(ringRadius, 0.008, 8, 48), mat.chain);
+    ring.position.z = ringZ;
     crank.add(ring);
     parts.chain.push(ring);
+    // Denti della corona e "ragno" a quattro bracci
+    const tooth = new THREE.BoxGeometry(0.008, 0.012, 0.005);
+    const teeth = Math.round(ringRadius * 380);
+    for (let i = 0; i < teeth; i++) {
+      const a = (i / teeth) * Math.PI * 2;
+      const t = new THREE.Mesh(tooth, mat.chain);
+      t.position.set(Math.cos(a) * (ringRadius + 0.009), Math.sin(a) * (ringRadius + 0.009), ringZ);
+      t.rotation.z = a - Math.PI / 2;
+      crank.add(t);
+      parts.chain.push(t);
+    }
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+      crank.add(tube([0, 0, ringZ], [Math.cos(a) * ringRadius * 0.92, Math.sin(a) * ringRadius * 0.92, ringZ], 0.007, mat.metal, 6));
+    }
     for (const [z, a] of [[0.08, 0], [-0.08, Math.PI]]) {
       const zz = z + Math.sign(z) * (S.motor === 'mid' ? 0.02 : 0);
-      crank.add(tube([0, 0, zz], [Math.cos(a) * 0.17, Math.sin(a) * 0.17, zz], 0.012, mat.metal));
-      const pedal = box(0.09, 0.02, 0.06, mat.dark, [Math.cos(a) * 0.17, Math.sin(a) * 0.17, zz + Math.sign(z) * 0.04]);
-      crank.add(pedal);
+      const tip = [Math.cos(a) * 0.17, Math.sin(a) * 0.17, zz];
+      crank.add(tube([0, 0, zz], tip, 0.011, mat.metal, 10));
+      // Pedale a piattaforma: corpo, perno e due guance
+      const pz = zz + Math.sign(z) * 0.05;
+      crank.add(tube(tip, [tip[0], tip[1], pz + Math.sign(z) * 0.04], 0.005, mat.metal, 6));
+      crank.add(box(0.1, 0.012, 0.08, mat.rubber, [tip[0], tip[1], pz]));
+      crank.add(box(0.1, 0.022, 0.006, mat.dark, [tip[0], tip[1], pz - 0.04]), box(0.1, 0.022, 0.006, mat.dark, [tip[0], tip[1], pz + 0.04]));
     }
     bike.add(crank);
     const ringR = S.motor === 'mid' ? 0.085 : 0.1;
@@ -321,6 +375,19 @@
     const chainLow = tube(v3([bb.x, bb.y - ringR], chainZ), v3([rear.x, rear.y - 0.042], chainZ), 0.006, mat.chain, 6);
     bike.add(chainTop, chainLow);
     parts.chain.push(chainTop, chainLow);
+    if (S.motor !== 'hub' || S.top !== 'fold') {
+      // Deragliatore posteriore: braccio e due rotelline sotto i pignoni
+      const derailleur = new THREE.Group();
+      derailleur.add(box(0.02, 0.1, 0.012, mat.dark, [rear.x + 0.005, rear.y - 0.05, chainZ + 0.012], -0.15));
+      for (const dy of [-0.055, -0.105]) {
+        const pulley = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.008, 16), mat.dark);
+        pulley.rotation.x = Math.PI / 2;
+        pulley.position.set(rear.x + 0.01 + dy * 0.12, rear.y + dy, chainZ);
+        derailleur.add(pulley);
+      }
+      bike.add(derailleur);
+      parts.chain.push(...derailleur.children);
+    }
     if (S.chainguard) {
       const len = bb.distanceTo(rear) * 0.75;
       const guard = box(len, 0.05, 0.012, mat.frame, [bb.x + (rear.x - bb.x) * 0.45, bb.y + 0.07, 0.085], Math.atan2(rear.y - bb.y, rear.x - bb.x));
@@ -360,13 +427,21 @@
     // ---- Accessori ----
     if (S.fenders) {
       // Angoli: 0 = davanti, PI/2 = in alto, PI = dietro
-      const fenders = S.longtail ? [[front, S.R, 0.15, 1.7]] : [[rear, rearR, 0.9, 2.0], [front, S.R, 0.15, 1.7]];
+      // Davanti copre da poco sopra l'orizzontale fin dietro la forcella; dietro dal piantone a poco sotto il mozzo.
+      const fenders = [[front, S.R, 0.72, 1.7]];
+      if (!S.longtail) fenders.push([rear, rearR, 1.3, 2.05]);
       for (const [c, R, start, arcLen] of fenders) {
-        const arc = new THREE.Mesh(new THREE.TorusGeometry(R + S.tire + 0.025, 0.03, 4, 40, arcLen), mat.frame);
-        arc.scale.z = S.tire > 0.03 ? 0.65 : 0.5;
+        const fr = R + S.tire + 0.022;
+        const arc = new THREE.Mesh(new THREE.TorusGeometry(fr, 0.026, 6, 40, arcLen), mat.frame);
+        arc.scale.z = S.tire > 0.03 ? 1.5 : 1.2;
         arc.position.copy(c);
         arc.rotation.z = start;
         bike.add(arc);
+        // Asticciole del parafango, dal bordo al mozzo
+        const end = start + (c === front ? 0 : arcLen);
+        for (const z of [-Z, Z]) {
+          bike.add(tube(v3([c.x + Math.cos(end) * fr, c.y + Math.sin(end) * fr], z * 0.9), v3([c.x, c.y], z), 0.0035, mat.metal, 5));
+        }
       }
     }
     if (S.rack) {
@@ -391,6 +466,49 @@
       }
       bike.add(curve([[rear.x - 0.38, y + 0.14, -0.12], [rear.x - 0.38, y + 0.2, 0], [rear.x - 0.38, y + 0.14, 0.12]], 0.01, mat.metal));
     }
+    // Leve dei freni e cavi verso le pinze
+    const leverAt = (s) => (S.bar === 'drop'
+      ? v3([stemTop.x + 0.1, stemTop.y - 0.01], s * 0.2)
+      : S.bar === 'riser'
+        ? v3([stemTop.x - 0.06, stemTop.y + 0.04], s * 0.22)
+        : v3([stemTop.x + 0.01, stemTop.y], s * ((S.bar === 'wide' ? 0.36 : 0.27) - 0.1)));
+    for (const s of [-1, 1]) {
+      const at = leverAt(s);
+      const lever = S.bar === 'drop'
+        ? box(0.04, 0.05, 0.022, mat.dark, [at.x, at.y + 0.015, at.z], -0.3)
+        : box(0.085, 0.012, 0.014, mat.dark, [at.x + 0.045, at.y - 0.01, at.z], -0.25);
+      bike.add(lever);
+      parts.brakes.push(lever);
+    }
+    const front2 = leverAt(-1);
+    const rear2 = leverAt(1);
+    bike.add(curve([front2, [head.x + 0.12, stemTop.y + 0.04, -0.07], [headLow.x + 0.05, headLow.y - 0.02, -0.06], [front.x - 0.05, front.y + 0.1, -Z - 0.02], caliperF.position], 0.0035, mat.cable, 60));
+    const topMid = v3(S.top === 'low' ? [0.15, 0.5] : [(seat.x + head.x) / 2, (seat.y + head.y) / 2 - 0.03], 0.03);
+    bike.add(curve([rear2, [head.x + 0.12, stemTop.y + 0.03, 0.07], [head.x - 0.03, head.y - 0.05, 0.04], topMid, [stayTop.x + 0.02, stayTop.y - 0.02, -0.03], [rear.x + 0.12, rear.y + 0.1, -Z - 0.02], caliperR.position], 0.0035, mat.cable, 80));
+
+    if (S.kickstand) {
+      // Cavalletto ripiegato lungo il fodero sinistro
+      bike.add(tube(v3([bb.x - 0.08, bb.y - 0.02], -0.06), v3([bb.x - 0.4, bb.y + 0.005], -0.075), 0.009, mat.dark, 8));
+      bike.add(box(0.03, 0.01, 0.025, mat.dark, [bb.x - 0.41, bb.y + 0.005, -0.075]));
+    }
+    if (S.bottle) {
+      // Borraccia nel portaborraccia: sul tubo obliquo, o sul piantone se lì c'è la batteria
+      const onSeatTube = S.battery === 'integrated';
+      const a = onSeatTube ? bb.clone().lerp(seat, 0.3) : bb.clone().lerp(headLow, 0.32);
+      const b = onSeatTube ? bb.clone().lerp(seat, 0.62) : bb.clone().lerp(headLow, 0.68);
+      const dir = b.clone().sub(a).normalize();
+      const off = onSeatTube ? new THREE.Vector3(-dir.y, dir.x, 0).multiplyScalar(-0.05) : new THREE.Vector3(-dir.y, dir.x, 0).multiplyScalar(0.05);
+      const bottle = tube(a.clone().add(off), b.clone().add(off), 0.032, mat.bottle, 18);
+      const cap = tube(b.clone().add(off), b.clone().add(off).addScaledVector(dir, 0.03), 0.014, mat.dark, 12);
+      bike.add(bottle, cap);
+      for (const t of [0.25, 0.75]) {
+        const cage = new THREE.Mesh(new THREE.TorusGeometry(0.034, 0.003, 6, 20), mat.metal);
+        cage.position.copy(a.clone().lerp(b, t).add(off));
+        cage.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
+        bike.add(cage);
+      }
+    }
+
     if (S.lamp) {
       const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.025, 0.05, 18), mat.lamp);
       lamp.rotation.z = Math.PI / 2;
@@ -485,6 +603,37 @@
     return mesh;
   }
 
+  /**
+   * "Studio fotografico" per i riflessi: cielo chiaro, orizzonte grigio-azzurro, pavimento scuro e due pannelli luminosi.
+   * three.js lo trasforma in una mappa d'ambiente: vernice e metalli riflettono come veri.
+   */
+  function studioEnvironment(renderer) {
+    const env = new THREE.Scene();
+    const geo = new THREE.SphereGeometry(10, 32, 16);
+    const colors = [];
+    const top = new THREE.Color(0xf4f8ff);
+    const horizon = new THREE.Color(0x8ea4bd);
+    const floor = new THREE.Color(0x141a22);
+    const pos = geo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const y = pos.getY(i) / 10;
+      const c = y > 0 ? horizon.clone().lerp(top, Math.pow(y, 0.6)) : horizon.clone().lerp(floor, Math.pow(-y, 0.5));
+      colors.push(c.r, c.g, c.b);
+    }
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    env.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
+    for (const [x, y, z, w, h] of [[2, 6, 4, 7, 3], [-7, 2.5, -1, 3, 4]]) {
+      const panel = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide }));
+      panel.position.set(x, y, z);
+      panel.lookAt(0, 0, 0);
+      env.add(panel);
+    }
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const texture = pmrem.fromScene(env, 0.03).texture;
+    pmrem.dispose();
+    return texture;
+  }
+
   /** Drin drin: due rintocchi metallici sintetizzati, niente file audio. */
   function ring() {
     try {
@@ -517,14 +666,17 @@
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' });
     renderer.setPixelRatio(Math.min(2, devicePixelRatio));
     renderer.domElement.style.touchAction = 'none';
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
     container.append(renderer.domElement);
 
     const scene = new THREE.Scene();
+    scene.environment = studioEnvironment(renderer);
     const camera = new THREE.PerspectiveCamera(30, 1, 0.05, 50);
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x223344, 1.6));
-    const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x223344, 0.6));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.7);
     sun.position.set(2, 3, 2.5);
-    const rimLight = new THREE.DirectionalLight(0x88ccff, 1.2);
+    const rimLight = new THREE.DirectionalLight(0x88ccff, 0.9);
     rimLight.position.set(-3, 1.5, -2);
     scene.add(sun, rimLight);
 
@@ -586,7 +738,6 @@
     let roadFade = 0;
     let highlight = null;
     let visible = true;
-    let last = performance.now();
     let lastDraw = 0;
     let aspect = 1;
     let idleTimer = null;
@@ -705,11 +856,14 @@
     const tmp = new THREE.Vector3();
     function frame(now) {
       requestAnimationFrame(frame);
-      const dt = Math.min(0.1, (now - last) / 1000);
-      last = now;
-      if (!visible || document.hidden) return;
+      if (!visible || document.hidden) {
+        lastDraw = now;
+        return;
+      }
       // Circa 40 immagini al secondo: fluida e più leggera sulla batteria.
+      // Il tempo si misura tra un disegno e l'altro, così ruote e telecamera vanno alla velocità giusta.
       if (now - lastDraw < 24) return;
+      const dt = Math.min(0.1, (now - lastDraw) / 1000);
       lastDraw = now;
 
       if (autoSpin) goal.yaw = cam.yaw + dt * 0.25;
