@@ -40,7 +40,7 @@ Con una finestra larga (almeno 1100 × 640) l'app diventa compatta a sinistra e 
 
 La bici 3D (`js/bike3d.js`, three.js caricato solo quando serve) compare in home, nella scheda di ogni bici (il "garage") e nella dashboard su computer.
 
-- In home, da ferma, la bici gira su se stessa al posto dello "0"; con Avvia torna la velocità (tocca il numero per il tachimetro analogico). Il pannello dei dati in basso si riduce a una riga con il tasto "Riduci".
+- In home, da ferma, la bici gira su se stessa al posto dello "0"; con Avvia torna la velocità (tocca il numero per il tachimetro analogico).
 - Modelli: classica, città, MTB, corsa ed elettriche di oggi: e-city (batteria sul portapacchi, motore centrale), e-trekking, e-MTB biammortizzata, e-gravel, e-cargo a coda lunga, e-pieghevole da 20" e e-fat.
 - Si gira trascinando, si avvicina con due dita o la rotellina, il campanello suona al tocco. Toccando una voce di manutenzione la telecamera va sul pezzo (freni, copertoni, catena, batteria e motore, sella, manubrio) e lo fa lampeggiare.
 

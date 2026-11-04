@@ -267,7 +267,6 @@
     root.dataset.moving = riding ? '1' : '';
     // Da ferma, al posto dello "0" c'è la bici 3D; con Avvia torna la velocità.
     $('speed-box').dataset.bike = homeBike && ride.state === 'idle' && !desktop.matches ? '1' : '';
-    $('panel-mini').textContent = `${km(ride.distanceM)} km · ${duration(ride.movingMs)} · ${kmh(ride.avgSpeedMs)} km/h`;
   }
 
   function render() {
@@ -376,19 +375,6 @@
     if (prefs.speedStyle === 'analog') sweepGauge();
   }
 
-  /** Pannello in basso: completo o ridotto a una riga, per lasciare spazio a strumenti e bici. */
-  function applyPanel() {
-    const collapsed = Boolean(prefs.panelCollapsed);
-    $('ride-panel').dataset.collapsed = collapsed ? '1' : '';
-    $('panel-toggle').setAttribute('aria-expanded', String(!collapsed));
-    $('panel-toggle-text').textContent = collapsed ? 'Mostra dati' : 'Riduci';
-  }
-
-  function togglePanel() {
-    prefs.panelCollapsed = !prefs.panelCollapsed;
-    savePrefs();
-    applyPanel();
-  }
 
   /** Km totali in home: uscite salvate più quella in corso, così crescono mentre pedali. */
   function renderTotal() {
@@ -1811,7 +1797,6 @@ ${segments}
       render();
     });
     $('btn-finish').addEventListener('click', finishRide);
-    $('panel-toggle').addEventListener('click', togglePanel);
     $('speed-box').addEventListener('click', toggleSpeedStyle);
     $('speed-box').addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
@@ -1857,7 +1842,6 @@ ${segments}
   if (!findBike(prefs.activeBikeId)) prefs.activeBikeId = bikeList[0].id;
   buildGauge();
   applySpeedStyle();
-  applyPanel();
   if (prefs.speedStyle === 'analog') setTimeout(sweepGauge, 300);
   setupBikes();
   renderBikePick();

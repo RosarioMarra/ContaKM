@@ -19,7 +19,6 @@
     kmAlert: 5,
     bikeType: 'Hybrid',
     speedStyle: 'digital', // 'digital' oppure 'analog'
-    panelCollapsed: false, // pannello dei dati in home ridotto a una riga
     activeBikeId: null,
     weightKg: 75,
     weeklyGoalKm: 50,
