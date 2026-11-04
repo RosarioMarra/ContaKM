@@ -2,7 +2,7 @@
 
 (() => {
   const {
-    Ride, NavSession, arrowAngle, bike3d: bike3dLib, heading: headingLib, bikes: bikeLib, caloriesFor, cloud, distance, newRecords, speedProfile, startOfWeek, weeklyTotals, fetchRoute, fetchRoutes, maneuverIcon, native, realGps, searchPlaces, simGps, store, summarize, trackSegments,
+    Ride, NavSession, arrowAngle, bike3d: bike3dLib, heading: headingLib, bikes: bikeLib, offline: offlineLib, caloriesFor, cloud, distance, newRecords, speedProfile, startOfWeek, weeklyTotals, fetchRoute, fetchRoutes, maneuverIcon, native, realGps, searchPlaces, simGps, store, summarize, trackSegments,
   } = globalThis.ContaKM;
 
   const L = window.L;
@@ -455,8 +455,11 @@
     // Mappa semplice, quasi solo strade e nomi; se non si carica si passa a OSM standard.
     let simple;
     try {
+      // Passa per il protocollo ckm:// che legge anche le zone salvate offline
+      const transformRequest = offlineLib.install(window.maplibregl) || undefined;
       simple = L.maplibreGL({
         style: 'https://tiles.openfreemap.org/styles/positron',
+        transformRequest,
         attribution: '© OpenStreetMap · OpenFreeMap',
       }).addTo(target);
     } catch { /* telefono senza WebGL */ }
@@ -1992,6 +1995,7 @@ ${segments}
     }
     if (name === 'history') renderHistory();
     if (name === 'more') {
+      renderOfflineList();
       renderBikeList();
       renderProfile();
     }
@@ -2034,8 +2038,140 @@ ${segments}
     view.scrollTo({ top: Math.max(0, top - view.clientHeight / 3), behavior: 'smooth' });
   }
 
+  // ---------- Mappe offline ----------
+
+  let offlineJob = null;
+
+  const mb = (bytes) => `${number(bytes / 1048576, bytes > 10 * 1048576 ? 0 : 1)} MB`;
+
+  /** Zona inquadrata: quella visibile sullo schermo (la mappa girata è più grande, si prende il centro). */
+  function visibleBounds() {
+    const size = map.getSize();
+    const view = $('view-map').getBoundingClientRect();
+    const w = Math.min(size.x, view.width);
+    const h = Math.min(size.y, view.height);
+    const c = map.getCenter();
+    const cp = map.latLngToContainerPoint(c);
+    const a = map.containerPointToLatLng([cp.x - w / 2, cp.y - h / 2]);
+    const b = map.containerPointToLatLng([cp.x + w / 2, cp.y + h / 2]);
+    return { south: Math.min(a.lat, b.lat), north: Math.max(a.lat, b.lat), west: Math.min(a.lng, b.lng), east: Math.max(a.lng, b.lng) };
+  }
+
+  async function placeName(lat, lon) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 3000);
+      const res = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}`, { signal: ctrl.signal });
+      clearTimeout(timer);
+      const p = (await res.json()).features?.[0]?.properties;
+      return p?.city || p?.town || p?.village || p?.county || p?.name || '';
+    } catch {
+      return '';
+    }
+  }
+
+  function openOfflineSave() {
+    if (!map) return;
+    if (!offlineLib.supported) {
+      toast('Su questo dispositivo non si possono salvare le mappe');
+      return;
+    }
+    if (!navigator.onLine) {
+      toast('Per salvare una zona serve internet');
+      return;
+    }
+    const bounds = visibleBounds();
+    const count = offlineLib.countTiles(bounds);
+    const tooBig = count > offlineLib.MAX_TILES;
+    $('offline-save').dataset.bounds = JSON.stringify(bounds);
+    $('offline-info').textContent = tooBig
+      ? 'Zona troppo grande: allontana meno lo zoom (al massimo una provincia) e riprova.'
+      : `Salvo la zona che vedi sullo schermo, con tutte le strade fino al massimo dettaglio. Circa ${number(Math.max(1, offlineLib.estimateMb(bounds)), 0)} MB.`;
+    $('btn-offline-go').disabled = tooBig;
+    $('offline-progress').hidden = true;
+    $('offline-name').disabled = false;
+    $('offline-name').value = '';
+    $('offline-name').placeholder = 'Zona salvata';
+    const c = map.getCenter();
+    placeName(c.lat, c.lng).then((name) => {
+      if (name && !$('offline-name').value) $('offline-name').placeholder = name;
+    });
+    $('offline-save').showModal();
+  }
+
+  async function runOfflineSave() {
+    const bounds = JSON.parse($('offline-save').dataset.bounds);
+    const name = $('offline-name').value.trim() || $('offline-name').placeholder || 'Zona salvata';
+    offlineJob = new AbortController();
+    $('btn-offline-go').disabled = true;
+    $('offline-name').disabled = true;
+    $('offline-progress').hidden = false;
+    $('offline-fill').style.width = '0%';
+    $('offline-progress-text').textContent = 'Preparo…';
+    try {
+      const area = await offlineLib.saveArea(bounds, name, (done, total) => {
+        $('offline-fill').style.width = `${Math.round((done / total) * 100)}%`;
+        $('offline-progress-text').textContent = `${Math.round((done / total) * 100)}% · ${done} di ${total} pezzi`;
+      }, offlineJob);
+      $('offline-save').close();
+      toast(`Zona “${area.name}” salvata (${mb(area.bytes)}): la mappa si vede anche offline.`);
+      renderOfflineList();
+    } catch (err) {
+      if (err.name !== 'AbortError') toast(err.message || 'Salvataggio non riuscito');
+      $('btn-offline-go').disabled = false;
+      $('offline-name').disabled = false;
+      $('offline-progress').hidden = true;
+    } finally {
+      offlineJob = null;
+    }
+  }
+
+  function closeOfflineSave() {
+    offlineJob?.abort();
+    $('offline-save').close();
+  }
+
+  function renderOfflineList() {
+    const areas = offlineLib.loadAreas();
+    $('offline-list').replaceChildren(...areas.map((a) => {
+      const li = document.createElement('li');
+      li.className = 'offline-row';
+      const btn = document.createElement('button');
+      btn.className = 'row';
+      const when = new Date(a.savedAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' });
+      btn.append(textBlock('row-title', a.name), textBlock('row-sub', `${mb(a.bytes)} · salvata il ${when}`));
+      btn.addEventListener('click', () => {
+        showView('map');
+        following = false;
+        $('btn-locate').hidden = false;
+        map.fitBounds([[a.bounds.south, a.bounds.west], [a.bounds.north, a.bounds.east]]);
+      });
+      const del = document.createElement('button');
+      del.className = 'btn btn-stop offline-del';
+      del.textContent = 'Elimina';
+      del.addEventListener('click', async () => {
+        if (!del.dataset.armed) {
+          del.dataset.armed = '1';
+          del.textContent = 'Sicuro?';
+          setTimeout(() => { del.dataset.armed = ''; del.textContent = 'Elimina'; }, 4000);
+          return;
+        }
+        await offlineLib.deleteArea(a.id);
+        toast(`“${a.name}” eliminata`);
+        renderOfflineList();
+      });
+      li.append(btn, del);
+      return li;
+    }));
+  }
+
   function bindEvents() {
     pinPage();
+    $('btn-map-save').addEventListener('click', openOfflineSave);
+    $('btn-offline-go').addEventListener('click', runOfflineSave);
+    $('btn-offline-cancel').addEventListener('click', closeOfflineSave);
+    $('btn-offline-close').addEventListener('click', closeOfflineSave);
+    $('offline-save').addEventListener('cancel', () => offlineJob?.abort());
     document.querySelectorAll('.tab').forEach((tab) => {
       tab.addEventListener('click', () => {
         askCompass();

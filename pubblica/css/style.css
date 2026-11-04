@@ -871,3 +871,17 @@ body {
 .sp-head span:first-child { white-space: nowrap; }
 .welcome-list + .hint { font-size: 14px; }
 .sp-head { flex-wrap: wrap; } .sp-head span:last-child { white-space: nowrap; }
+
+/* Mappe offline */
+.map-save {
+  position: absolute; z-index: 500; right: 12px; top: calc(var(--safe-top) + 150px);
+  width: 52px; height: 52px; font-size: 26px; background: var(--bg); box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
+}
+.offline-row { display: flex; gap: 8px; align-items: stretch; }
+.offline-row .row { flex: 1; min-width: 0; }
+.offline-del { flex: none; min-height: 0; padding: 0 14px; font-size: 15px; }
+.offline-info { margin: 4px 0 14px; color: var(--muted); }
+.offline-progress { margin-top: 14px; display: grid; gap: 6px; }
+.offline-progress .bar-fill { transition: width .2s; }
+.offline-progress-text { font-size: 14px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+#offline-save .preview-actions { margin-top: 16px; }
