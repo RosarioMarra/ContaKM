@@ -885,7 +885,7 @@
       : [];
     renderResults([...start, ...favorites, ...recents], 'Per sicurezza, scegli la destinazione da fermo.');
     $('search').showModal();
-    input.focus();
+    input.focus({ preventScroll: true });
   }
 
   async function runSearch(query) {
@@ -1850,7 +1850,7 @@ ${segments}
     $('btn-maint-delete').dataset.armed = '';
     $('btn-maint-delete').textContent = 'Elimina';
     $('maint-edit').showModal();
-    if (!item) $('maint-label').focus();
+    if (!item) $('maint-label').focus({ preventScroll: true });
   }
 
   function saveMaint() {
@@ -1892,7 +1892,7 @@ ${segments}
     input.value = findBike(editingBikeId).name;
     $('bike-title-btn').hidden = true;
     input.hidden = false;
-    input.focus();
+    input.focus({ preventScroll: true });
     input.select();
   }
 
@@ -1933,7 +1933,7 @@ ${segments}
     $('btn-picker-manage').addEventListener('click', () => {
       $('bike-picker').close();
       showView('more');
-      $('bike-list').scrollIntoView({ block: 'center' });
+      revealInView($('bike-list'), 'view-more');
     });
     $('btn-bike-add').addEventListener('click', addBike);
     $('btn-bike-close').addEventListener('click', () => $('bike').close());
@@ -2008,7 +2008,34 @@ ${segments}
     if (firstStart && prefs.speedStyle === 'analog') setTimeout(sweepGauge, 250);
   }
 
+  /**
+   * La pagina non deve mai scorrere: solo le schede scorrono al loro interno.
+   * Tastiera, focus o un salto automatico possono spostarla e far sparire la barra in basso.
+   */
+  function pinPage() {
+    const reset = () => {
+      if (window.scrollX || window.scrollY) window.scrollTo(0, 0);
+      for (const el of [document.documentElement, document.body, $('app')].filter(Boolean)) {
+        if (el.scrollTop || el.scrollLeft) { el.scrollTop = 0; el.scrollLeft = 0; }
+      }
+    };
+    window.addEventListener('scroll', reset, { passive: true });
+    $('app')?.addEventListener('scroll', reset, { passive: true });
+    document.addEventListener('focusout', () => setTimeout(reset, 50));
+    window.visualViewport?.addEventListener('resize', () => setTimeout(reset, 50));
+    document.addEventListener('visibilitychange', reset);
+    window.addEventListener('orientationchange', () => setTimeout(reset, 300));
+  }
+
+  /** Porta un elemento in vista scorrendo solo la sua scheda, non tutta la pagina. */
+  function revealInView(el, viewId) {
+    const view = $(viewId);
+    const top = el.getBoundingClientRect().top - view.getBoundingClientRect().top + view.scrollTop;
+    view.scrollTo({ top: Math.max(0, top - view.clientHeight / 3), behavior: 'smooth' });
+  }
+
   function bindEvents() {
+    pinPage();
     document.querySelectorAll('.tab').forEach((tab) => {
       tab.addEventListener('click', () => {
         askCompass();
