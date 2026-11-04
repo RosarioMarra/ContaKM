@@ -35,6 +35,7 @@
     <symbol id="i-destination" viewBox="0 0 24 24"><path d="M6 22V3M6 4h12l-3 4 3 4H6"/></symbol>
     <symbol id="i-bike" viewBox="0 0 24 24"><circle cx="5.500" cy="16.500" r="3.500"/><circle cx="18.500" cy="16.500" r="3.500"/><path d="M5.500 16.500 9.500 9h6l3 7.500M9.500 9 12 16.500h-1M8 6h3M14 6h2l1.500 3"/></symbol>
     <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.500"/><path d="m20.500 20.500-4.800-4.800M11 8.500v5M8.500 11h5"/></symbol>
     <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4ZM13.500 6.500l4 4"/></symbol>
   </svg>
 
@@ -96,6 +97,7 @@
         <div class="speed" id="speed-box" role="button" tabindex="0" aria-label="Tocca per cambiare tachimetro">
           <div class="speed-value" id="speed">0</div>
           <svg class="gauge" id="gauge" viewBox="0 0 200 172" hidden aria-hidden="true"></svg>
+          <div class="home-bike" id="home-bike" aria-label="La tua bici in 3D: trascina per girarla, tocca il campanello per suonarlo"></div>
           <div class="speed-unit">km/h <span class="speed-note" id="speed-note"></span></div>
         </div>
 
@@ -239,7 +241,7 @@
           <div class="dash-speed"><span id="dash-speed">0</span><small>km/h</small></div>
           <div class="dash-state" id="dash-state">Ferma</div>
         </div>
-        <p class="dash-hint">Trascina per ruotare</p>
+        <p class="dash-hint" id="dash-hint">Trascina per girarla · rotellina per lo zoom · clic sul campanello</p>
       </div>
 
       <div class="dash-kpis">
@@ -320,6 +322,17 @@
       </button>
       <input class="title-input" id="bike-title-input" type="text" maxlength="40" autocomplete="off" enterkeyhint="done" aria-label="Nome della bici" hidden>
       <button class="icon-btn" id="btn-bike-close" aria-label="Chiudi"><svg><use href="#i-close"/></svg></button>
+    </div>
+    <div class="garage">
+      <div class="garage-stage" id="garage-3d"></div>
+      <div class="garage-bar">
+        <span class="garage-caption" id="garage-caption">Trascina per girarla · due dita per lo zoom · tocca il campanello</span>
+        <button class="garage-reset" id="garage-reset" hidden>Vista intera</button>
+      </div>
+    </div>
+    <div class="garage-tools">
+      <div class="field"><span>Telaio</span><div class="segmented" id="bike-frame"></div></div>
+      <div class="field"><span>Colore</span><div class="swatches" id="bike-colors"></div></div>
     </div>
     <button class="btn btn-primary wide" id="btn-bike-use">Usa questa bici</button>
     <p class="in-use" id="bike-in-use">Bici in uso</p>

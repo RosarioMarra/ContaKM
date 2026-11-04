@@ -17,6 +17,49 @@
 
   const BIKE_TYPES = ['City', 'Hybrid', 'Road', 'Mountain'];
 
+  /** Vernici proposte per la bici 3D; si può anche scegliere un colore qualsiasi. */
+  const BIKE_COLORS = [
+    { value: '#38bdf8', label: 'Azzurro' },
+    { value: '#e5484d', label: 'Rosso' },
+    { value: '#ff7a1a', label: 'Arancio' },
+    { value: '#f5c518', label: 'Giallo' },
+    { value: '#34d399', label: 'Verde' },
+    { value: '#2f5bd3', label: 'Blu' },
+    { value: '#f472b6', label: 'Rosa' },
+    { value: '#eef1f5', label: 'Bianco' },
+    { value: '#a8b3bf', label: 'Argento' },
+    { value: '#24282e', label: 'Nero' },
+  ];
+
+  /** Telai della bici 3D. Se non è scelto, si deduce dal tipo di bici. */
+  const FRAME_STYLES = [
+    { value: 'classic', label: 'Classico' },
+    { value: 'city', label: 'Città' },
+    { value: 'mtb', label: 'MTB' },
+    { value: 'road', label: 'Corsa' },
+  ];
+  const FRAME_FOR_TYPE = { City: 'city', Hybrid: 'classic', Road: 'road', Mountain: 'mtb' };
+
+  const frameOf = (bike) => bike?.frame || FRAME_FOR_TYPE[bike?.type] || 'classic';
+  const colorOf = (bike, fallback = '#38bdf8') => bike?.color || fallback;
+
+  /** Su quale pezzo della bici 3D zoomare per una voce di manutenzione. */
+  const PART_FOR_KEY = { 'chain-lube': 'chain', chain: 'chain', brakes: 'brakes', tyres: 'tyres', battery: 'battery', service: 'all' };
+  // Prima i pezzi precisi: "cambio sella" è la sella, "cambio" da solo è il cambio della trasmissione.
+  const PART_WORDS = [
+    [/sell|reggisell/i, 'saddle'],
+    [/manubr|sterz|campanel|luc/i, 'handlebar'],
+    [/fren|pastigl|disc/i, 'brakes'],
+    [/copert|gomm|pneum|ruot|camer/i, 'tyres'],
+    [/batter|motor/i, 'battery'],
+    [/caten|cambi|deragl|pignon|corona|trasmiss/i, 'chain'],
+  ];
+  function partFor(item) {
+    if (item?.key && PART_FOR_KEY[item.key]) return PART_FOR_KEY[item.key];
+    const found = PART_WORDS.find(([re]) => re.test(item?.label || ''));
+    return found ? found[1] : 'all';
+  }
+
   const newId = (prefix) => `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 
   function maintenanceItem(fields, km, now) {
@@ -46,6 +89,8 @@
       size: fields.size || '',
       weightKg: Number(fields.weightKg) || null,
       purchasedOn: fields.purchasedOn || '',
+      color: fields.color || null,
+      frame: fields.frame || null,
       startKm,
       createdAt: now,
       maintenance: MAINTENANCE_DEFAULTS.map((d) => maintenanceItem(d, startKm, now)),
@@ -139,6 +184,11 @@
   globalThis.ContaKM ??= {};
   globalThis.ContaKM.bikes = {
     MAINTENANCE_DEFAULTS,
+    BIKE_COLORS,
+    FRAME_STYLES,
+    frameOf,
+    colorOf,
+    partFor,
     createBike,
     ridesOf,
     bikeKm,

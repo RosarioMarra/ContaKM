@@ -669,3 +669,71 @@ body {
 }
 :root[data-theme="sun"] .stat, :root[data-theme="sun"] .row, :root[data-theme="sun"] .maint-item,
 :root[data-theme="sun"] .btn-primary { background-image: none; box-shadow: none; }
+
+/* ==========================================================================
+   Bici 3D su smartphone: home da ferma e garage nella scheda della bici
+   ========================================================================== */
+
+.speed { position: relative; }
+.home-bike {
+  position: absolute; inset: 0; opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity .5s ease, visibility 0s .5s, transform .5s cubic-bezier(.2, .8, .2, 1);
+  transform: scale(.94);
+}
+.home-bike canvas { display: block; width: 100%; height: 100%; }
+.speed[data-bike="1"] .home-bike { opacity: 1; visibility: visible; pointer-events: auto; transform: none; transition-delay: 0s; }
+.speed > .speed-value, .speed > .gauge, .speed > .speed-unit { transition: opacity .4s ease, transform .4s ease; }
+.speed[data-bike="1"] > .speed-value, .speed[data-bike="1"] > .gauge, .speed[data-bike="1"] > .speed-unit { opacity: 0; transform: scale(.9); }
+
+.garage {
+  position: relative; flex: none; height: min(42vh, 300px); border-radius: 18px; overflow: hidden;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(70% 70% at 50% 78%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 55%, transparent), var(--surface));
+}
+.garage-stage { position: absolute; inset: 0; }
+.garage-stage canvas { display: block; width: 100%; height: 100%; animation: fade-in .8s; }
+.garage-stage.no-3d::after, .home-bike.no-3d::after {
+  content: "Grafica 3D non disponibile"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted);
+}
+.garage-bar {
+  position: absolute; left: 10px; right: 10px; bottom: 10px; display: flex; align-items: center; gap: 8px; pointer-events: none;
+}
+.garage-caption {
+  flex: 1; min-width: 0; padding: 6px 10px; border-radius: 10px; font-size: 14px; font-weight: 700; line-height: 1.25;
+  background: color-mix(in srgb, var(--bg) 72%, transparent); backdrop-filter: blur(6px); color: var(--ink);
+}
+.garage-reset {
+  pointer-events: auto; flex: none; padding: 8px 12px; border-radius: 10px; font-size: 14px; font-weight: 800;
+  background: var(--accent); color: var(--on-accent);
+}
+.garage-tools { display: grid; gap: 10px; flex: none; }
+.garage-tools .segmented button { min-height: 44px; font-size: 16px; }
+
+.swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+.swatch {
+  position: relative; width: 38px; height: 38px; border-radius: 50%; flex: none;
+  background: radial-gradient(circle at 32% 28%, color-mix(in srgb, #fff 45%, var(--paint)), var(--paint) 55%, color-mix(in srgb, #000 25%, var(--paint)));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .25), 0 2px 6px rgba(0, 0, 0, .35);
+  transition: transform .15s cubic-bezier(.3, 1.6, .5, 1);
+}
+.swatch[aria-pressed="true"] { transform: scale(1.12); box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--ink); }
+.swatch-custom { background: conic-gradient(#e5484d, #f5c518, #34d399, #38bdf8, #2f5bd3, #f472b6, #e5484d); cursor: pointer; overflow: hidden; }
+.swatch-custom input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
+
+.paint-dot {
+  display: inline-block; width: 12px; height: 12px; margin-right: 8px; border-radius: 50%; vertical-align: 2px;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ink) 18%, transparent);
+}
+.maint-item { cursor: pointer; }
+.maint-label { display: flex; align-items: center; gap: 6px; }
+.maint-eye { flex: none; font-size: 18px; color: var(--accent); }
+
+@media (orientation: landscape) and (max-height: 560px) {
+  .garage { height: 60vh; }
+}
+@media (min-width: 1100px) and (min-height: 640px) {
+  .garage { height: 260px; }
+  .swatch { width: 30px; height: 30px; }
+}
