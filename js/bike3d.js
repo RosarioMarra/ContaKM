@@ -129,7 +129,7 @@
     const glow = (c, i) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: i });
     return {
       // Vernice con trasparente lucido sopra, come un telaio vero
-      frame: new THREE.MeshPhysicalMaterial({ color, metalness: 0.35, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.08 }),
+      frame: new THREE.MeshPhysicalMaterial({ color, metalness: 0.35, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.08, side: THREE.DoubleSide }),
       metal: std(0xc8d0d8, 0.9, 0.25),
       spoke: std(0xaab4bf, 0.8, 0.35),
       dark: std(0x23282f, 0.2, 0.6),
@@ -280,6 +280,30 @@
 
     // ---- Telaio ----
     bike.add(tube(headLow, head, T * 1.25, mat.frame));
+    // Dettagli del telaio: scatola del movimento centrale, calotte dello sterzo, raccordi, forcellini, collarino
+    const shellBB = new THREE.Mesh(new THREE.CylinderGeometry(T * 1.35, T * 1.35, 0.074, 20), mat.frame);
+    shellBB.rotation.x = Math.PI / 2;
+    shellBB.position.copy(bb);
+    bike.add(shellBB);
+    const headDir = head.clone().sub(headLow).normalize();
+    for (const [p, sgn] of [[head, 1], [headLow, -1]]) {
+      const cup = new THREE.Mesh(new THREE.CylinderGeometry(T * 1.45, T * 1.45, 0.014, 20), mat.metal);
+      cup.position.copy(p).addScaledVector(headDir, sgn * 0.007);
+      cup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), headDir);
+      bike.add(cup);
+    }
+    for (const [p, r] of [[seat, T * 1.05], [v3([head.x - 0.01, head.y - 0.03]), T * 1.1]]) {
+      const joint = new THREE.Mesh(new THREE.SphereGeometry(r, 16, 12), mat.frame);
+      joint.position.copy(p);
+      bike.add(joint);
+    }
+    for (const z of [-Z * 0.9 - 0.004, Z * 0.9 + 0.004]) {
+      bike.add(box(0.045, 0.032, 0.006, mat.frame, [rear.x + 0.012, rear.y + 0.004, z], 0.35));
+    }
+    const clamp = new THREE.Mesh(new THREE.TorusGeometry(T * 1.05, 0.004, 6, 18), mat.metal);
+    clamp.position.copy(seat);
+    clamp.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), seat.clone().sub(bb).normalize());
+    bike.add(clamp);
     const integrated = S.battery === 'integrated';
     if (S.top === 'fold') {
       // Pieghevole: un solo tubo spesso con la cerniera a metà, piantone e attacco alti.
@@ -596,8 +620,20 @@
       bike.add(tube(v3([fd.x, fd.y], 0), v3([fd.x + 0.02, fd.y], chainZ), 0.008, mat.dark, 8));
     }
     if (S.chainguard) {
-      const len = bb.distanceTo(rear) * 0.75;
-      const guard = box(len, 0.05, 0.012, mat.frame, [bb.x + (rear.x - bb.x) * 0.45, bb.y + 0.07, 0.085], Math.atan2(rear.y - bb.y, rear.x - bb.x));
+      // Paracatena come sulle bici da città: lamina sopra il tratto alto della catena, arrotondata sulla corona
+      const g = new THREE.Shape();
+      const top = 0.022;
+      const back = bb.distanceTo(rear) * 0.82;
+      g.moveTo(-back, ringR + top - 0.004);
+      g.lineTo(0, ringR + top);
+      g.absarc(0, 0, ringR + top, Math.PI / 2, -Math.PI / 6, true);
+      g.lineTo(Math.cos(-Math.PI / 6) * (ringR - 0.01), Math.sin(-Math.PI / 6) * (ringR - 0.01));
+      g.absarc(0, 0, ringR - 0.01, -Math.PI / 6, Math.PI / 2, false);
+      g.lineTo(-back, ringR - 0.018);
+      g.closePath();
+      const guard = new THREE.Mesh(new THREE.ExtrudeGeometry(g, { depth: 0.003, bevelEnabled: true, bevelThickness: 0.002, bevelSize: 0.002, bevelSegments: 2, curveSegments: 20 }), mat.frame);
+      guard.position.set(bb.x, bb.y, 0.088);
+      guard.rotation.z = Math.atan2(rear.y + 0.03 - bb.y, rear.x - bb.x) - Math.PI;
       bike.add(guard);
     }
     if (S.motor === 'mid') {
@@ -633,23 +669,35 @@
 
     // ---- Accessori ----
     if (S.fenders) {
-      // Angoli: 0 = davanti, PI/2 = in alto, PI = dietro
-      // Davanti copre da poco sopra l'orizzontale fin dietro la forcella; dietro dal piantone a poco sopra l'altezza del mozzo.
-      // Anteriore spostato indietro: la punta resta alta davanti, la coda scende dietro la forcella.
-      const fenders = [[front, S.R, 0.98, 1.78]];
-      if (!S.longtail) fenders.push([rear, rearR, 1.42, 1.62]);
-      for (const [c, R, start, arcLen] of fenders) {
-        const fr = R + S.tire + 0.022;
-        const arc = new THREE.Mesh(new THREE.TorusGeometry(fr, 0.026, 6, 40, arcLen), mat.frame);
-        arc.scale.z = S.tire > 0.03 ? 1.5 : 1.2;
-        arc.position.copy(c);
-        arc.rotation.z = start;
-        bike.add(arc);
-        // Asticciole del parafango, dal bordo al mozzo
-        const end = start + (c === front ? 0 : arcLen);
-        for (const z of [-Z, Z]) {
-          bike.add(tube(v3([c.x + Math.cos(end) * fr, c.y + Math.sin(end) * fr], z * 0.9), v3([c.x, c.y], z), 0.0035, mat.metal, 5));
+      // Come sulle bici in commercio (angoli dal mozzo: 0 = davanti, 90° = in alto, 180° = dietro):
+      // anteriore da ~56° davanti fin dietro la forcella; posteriore che avvolge la ruota da subito dietro
+      // il movimento centrale (~18°) fino a poco sotto il mozzo dietro (~195°), con il catarifrangente.
+      const width = Math.max(0.05, S.tire * 2 + 0.03);
+      const deg = Math.PI / 180;
+      const list = [{ c: front, R: S.R, from: 56 * deg, to: 158 * deg, stays: [56 * deg] }];
+      if (!S.longtail) list.push({ c: rear, R: rearR, from: 18 * deg, to: 195 * deg, stays: [120 * deg, 188 * deg], reflector: true });
+      for (const f of list) {
+        const fr = f.R + S.tire + 0.024;
+        const shell = new THREE.Mesh(fenderGeometry(fr, f.from, f.to, width), mat.frame);
+        shell.position.copy(f.c);
+        bike.add(shell);
+        // Astine dal bordo del parafango al mozzo
+        for (const a of f.stays) {
+          for (const z of [-Z, Z]) {
+            bike.add(tube(v3([f.c.x + Math.cos(a) * fr, f.c.y + Math.sin(a) * fr], z * 0.85), v3([f.c.x, f.c.y], z), 0.0035, mat.metal, 5));
+          }
         }
+        if (f.reflector) {
+          const a = f.to - 12 * deg;
+          const refl = box(0.012, 0.045, 0.03, mat.tail, [f.c.x + Math.cos(a) * (fr + 0.006), f.c.y + Math.sin(a) * (fr + 0.006), 0], a);
+          bike.add(refl);
+        }
+      }
+      if (!S.longtail) {
+        // Attacco del parafango posteriore al ponticello dei foderi bassi, dietro il movimento centrale
+        const a = 18 * deg;
+        const fr = rearR + S.tire + 0.024;
+        bike.add(box(0.03, 0.012, Z * 1.9, mat.frame, [rear.x + Math.cos(a) * fr - 0.01, rear.y + Math.sin(a) * fr - 0.012, 0]));
       }
     }
     if (S.rack) {
@@ -828,6 +876,36 @@
     x.fillStyle = g;
     x.fillRect(0, 0, 256, 4);
     return new THREE.CanvasTexture(c);
+  }
+
+  /**
+   * Parafango come quelli veri: una lamiera curva a "U" rovesciata che segue la ruota,
+   * più alta al centro e piegata verso la gomma sui bordi. Angoli in radianti dal mozzo.
+   */
+  function fenderGeometry(radius, from, to, width) {
+    const segs = 56;
+    const across = 10;
+    const pos = [];
+    const idx = [];
+    for (let i = 0; i <= segs; i++) {
+      const a = from + ((to - from) * i) / segs;
+      for (let j = 0; j <= across; j++) {
+        const t = (j / across) * 2 - 1;
+        const r = radius - 0.014 * t * t;
+        pos.push(Math.cos(a) * r, Math.sin(a) * r, (t * width) / 2);
+      }
+    }
+    for (let i = 0; i < segs; i++) {
+      for (let j = 0; j < across; j++) {
+        const k = i * (across + 1) + j;
+        idx.push(k, k + across + 1, k + 1, k + 1, k + across + 1, k + across + 2);
+      }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setIndex(idx);
+    geo.computeVertexNormals();
+    return geo;
   }
 
   function shadowMesh() {
