@@ -14,7 +14,8 @@
   const DEFAULT_PREFS = {
     voice: true,
     sun: false,
-    accent: 'orange',
+    accent: 'blue',
+    accentV2: true, // dal colore predefinito arancio si passa una volta all'azzurro
     kmAlert: 5,
     bikeType: 'Hybrid',
     wecity: true,

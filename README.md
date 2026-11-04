@@ -32,9 +32,13 @@ Finché la bici è in movimento lo schermo resta acceso e l'app deve restare in 
 
 Il numero di satelliti non è disponibile nei browser: l'app mostra la precisione GPS in metri, che è il dato reale fornito dal telefono.
 
+## Su computer
+
+Con una finestra larga (almeno 1100 × 640) l'app diventa compatta a sinistra e a destra compare la dashboard: bici 3D (three.js, caricata solo qui) che si ruota trascinando e le cui ruote girano alla velocità vera, dati dell'uscita in corso, km di settimana e mese, km degli ultimi 7 giorni e manutenzione più vicina.
+
 ## Bici e manutenzione
 
-In Altro → Le tue bici puoi aggiungere più bici, ognuna con tipo, eventuale motore elettrico, marca, modello, taglia, peso, data di acquisto e km fatti prima di ContaKM. In home scegli con che bici esci: l'uscita resta legata a quella bici e il navigatore usa il suo tipo.
+In Altro → Le tue bici puoi aggiungere più bici e rinominarle toccando il nome in cima alla loro scheda, ognuna con tipo, eventuale motore elettrico, marca, modello, taglia, peso, data di acquisto e km fatti prima di ContaKM. In home scegli con che bici esci: l'uscita resta legata a quella bici e il navigatore usa il suo tipo.
 
 Ogni bici ha il suo profilo di manutenzione: lubrificazione catena (300 km), sostituzione catena (3.000 km), pastiglie freni (2.000 km), copertoni (4.000 km), tagliando (12 mesi) e, per le elettriche, controllo batteria (6 mesi). Le scadenze si possono cambiare, si possono aggiungere altre voci, e "Fatto" azzera il conteggio salvando la data. A fine uscita compare un avviso se qualcosa è da fare.
 

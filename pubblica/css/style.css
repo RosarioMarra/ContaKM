@@ -4,8 +4,8 @@
   --ink: #ffffff;
   --muted: #a5b8cc;
   --line: #2f4561;
-  --accent: #ff7a1a;
-  --on-accent: #1a0e04;
+  --accent: #38bdf8;
+  --on-accent: #04202e;
   --warn: #ffc83d;
   --danger: #ff6b63;
   --ok: #3ddc97;
@@ -15,7 +15,7 @@
   --safe-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
 }
 
-:root[data-accent="blue"] { --accent: #38bdf8; --on-accent: #04202e; }
+:root[data-accent="orange"] { --accent: #ff7a1a; --on-accent: #1a0e04; }
 :root[data-accent="green"] { --accent: #34d399; --on-accent: #042a1c; }
 :root[data-accent="pink"] { --accent: #f472b6; --on-accent: #33071f; }
 
@@ -322,6 +322,14 @@ h2 { font-size: 20px; font-weight: 800; margin: 18px 0 8px; }
 .row-due { color: var(--danger); font-weight: 700; }
 .in-use { margin: 0; text-align: center; font-size: 18px; font-weight: 700; color: var(--accent); }
 .sheet > .btn, .sheet > .history, .sheet > .maint, .sheet > .stats, .sheet > .form { flex: none; }
+.title-edit { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; text-align: left; padding: 4px 0; }
+.title-edit h2 { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.title-edit svg { flex: none; font-size: 22px; color: var(--muted); }
+.title-input {
+  flex: 1; min-width: 0; height: 52px; padding: 0 12px; font: inherit; font-size: 24px; font-weight: 800; color: var(--ink);
+  background: var(--surface); border: 2px solid var(--accent); border-radius: 12px; outline: none;
+  user-select: text; -webkit-user-select: text;
+}
 .sheet h3 { font-size: 21px; font-weight: 800; margin: 8px 0 0; }
 
 .maint { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
@@ -380,3 +388,284 @@ h2 { font-size: 20px; font-weight: 800; margin: 18px 0 8px; }
   .tab { height: auto; font-size: 12px; }
   .btn { min-height: 60px; }
 }
+
+/* ==========================================================================
+   Movimento: animazioni legate alla bici. Tutte si spengono con "riduci movimento".
+   ========================================================================== */
+
+body {
+  background:
+    radial-gradient(120% 55% at 50% -12%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 62%),
+    var(--bg);
+}
+:root[data-theme="sun"] body { background: var(--bg); }
+.tabs { background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); }
+
+/* Cambio scheda e pannelli */
+.view:not([hidden]) { animation: view-in .34s cubic-bezier(.2, .8, .2, 1) backwards; }
+@keyframes view-in { from { opacity: 0; transform: translateY(12px); } }
+.sheet[open] { animation: sheet-in .36s cubic-bezier(.2, .9, .25, 1); }
+@keyframes sheet-in { from { opacity: 0; transform: translateY(28px); } }
+.sheet[open]::backdrop { animation: fade-in .3s; }
+@keyframes fade-in { from { opacity: 0; } }
+
+/* Logo: la lancetta sale come all'accensione di un tachimetro */
+.logo-anim { border-radius: 8px; }
+.logo-needle { stroke: var(--accent); fill: var(--accent); transform-origin: 50px 54px; animation: needle-wake 1.3s cubic-bezier(.3, 1.6, .5, 1) .15s backwards; }
+@keyframes needle-wake { 0% { transform: rotate(-135deg); } 55% { transform: rotate(40deg); } 100% { transform: rotate(0); } }
+:root[data-theme="sun"] .logo-needle { stroke: #ff7a1a; fill: #ff7a1a; }
+
+/* Riquadri della home che entrano uno dopo l'altro */
+#view-ride .stat, #view-ride .controls { animation: tile-in .5s cubic-bezier(.2, .8, .2, 1) backwards; }
+#view-ride .stats .stat:nth-child(2) { animation-delay: .05s; }
+#view-ride .stats .stat:nth-child(3) { animation-delay: .1s; }
+#view-ride .stats .stat:nth-child(4) { animation-delay: .15s; }
+#view-ride .stats-small .stat { animation-delay: .2s; }
+#view-ride .stat-total { animation-delay: .25s; }
+#view-ride .controls { animation-delay: .3s; }
+@keyframes tile-in { from { opacity: 0; transform: translateY(14px) scale(.98); } }
+
+/* Velocità: pulsa quando cambia, si illumina in movimento */
+.speed-value { transition: text-shadow .6s, color .3s; }
+#view-ride[data-moving="1"] .speed-value { text-shadow: 0 0 42px color-mix(in srgb, var(--accent) 55%, transparent); }
+.bump { animation: bump .32s cubic-bezier(.3, 1.8, .5, 1); }
+@keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
+#view-ride[data-state="paused"] .speed-value { animation: breathe 2.2s ease-in-out infinite; }
+@keyframes breathe { 50% { opacity: .45; } }
+
+/* Strada: le linee di mezzeria scorrono alla velocità della bici */
+.road {
+  flex: none; height: 4px; margin: 2px 0; border-radius: 2px; opacity: 0; transition: opacity .5s;
+  background: repeating-linear-gradient(90deg, var(--accent) 0 22px, transparent 22px 40px);
+  background-size: 40px 4px;
+  mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+}
+#view-ride[data-state="running"] .road { opacity: 1; animation: road var(--road, 1s) linear infinite; }
+#view-ride[data-state="paused"] .road { opacity: .35; }
+@keyframes road { to { background-position: -40px 0; } }
+
+/* Bici nel selettore: le ruote girano mentre pedali */
+.bike-anim { font-size: 24px; }
+.bike-anim .wheel { transform-box: view-box; }
+#view-ride[data-state="running"] .bike-anim .wheel { animation: spin var(--spin, 1s) linear infinite; }
+#view-ride[data-moving="1"] .bike-anim { animation: pedal-bob .5s ease-in-out infinite alternate; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pedal-bob { to { transform: translateY(-1.5px); } }
+
+/* Avvia: un anello che pulsa invita a partire */
+#btn-start { position: relative; isolation: isolate; }
+#btn-start::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; z-index: -1;
+  animation: ring 2.4s cubic-bezier(.2, .6, .3, 1) infinite;
+}
+@keyframes ring {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 65%, transparent); }
+  70%, 100% { box-shadow: 0 0 0 16px transparent; }
+}
+.btn { transition: transform .12s, filter .2s, background-color .2s; }
+.btn:active, .icon-btn:active, .row:active, .tab:active { transform: scale(.96); }
+.icon-btn, .row, .tab { transition: transform .12s, background-color .2s, border-color .2s; }
+
+/* Ogni km intero: il riquadro si illumina e sale l'etichetta */
+.stat { position: relative; }
+#view-ride .stat.bump { animation: km-glow 1s ease-out; }
+@keyframes km-glow { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 70%, transparent); transform: scale(1.04); } 100% { box-shadow: 0 0 0 18px transparent; transform: scale(1); } }
+.km-badge {
+  position: absolute; right: 10px; top: 6px; padding: 2px 10px; border-radius: 12px;
+  font-size: 16px; font-weight: 800; background: var(--accent); color: var(--on-accent);
+  animation: km-up 1.6s cubic-bezier(.2, .8, .2, 1) forwards; pointer-events: none;
+}
+@keyframes km-up { 0% { opacity: 0; transform: translateY(8px) scale(.8); } 20% { opacity: 1; transform: translateY(-6px) scale(1.05); } 100% { opacity: 0; transform: translateY(-36px); } }
+
+/* GPS agganciato: un'onda come un radar */
+.gps[data-state="ok"] .dot { animation: radar 2.4s ease-out infinite; }
+@keyframes radar { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 70%, transparent); } 80%, 100% { box-shadow: 0 0 0 8px transparent; } }
+
+/* Schede: l'icona scelta fa un piccolo salto */
+.tab[aria-current="page"] svg { animation: tab-pop .45s cubic-bezier(.3, 1.8, .5, 1); }
+@keyframes tab-pop { 40% { transform: translateY(-4px) scale(1.12); } }
+
+/* Avvisi che scendono dall'alto */
+.toast:not([hidden]) { animation: toast-in .45s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes toast-in { from { opacity: 0; transform: translateY(-18px) scale(.96); } }
+
+/* Barre di manutenzione e obiettivo che si riempiono */
+.bar-fill { transform-origin: left; animation: grow .9s cubic-bezier(.2, .8, .2, 1) backwards; }
+@keyframes grow { from { transform: scaleX(0); } }
+.bar-fill[data-due="1"] { animation: grow .9s cubic-bezier(.2, .8, .2, 1) backwards, due-blink 1.6s ease-in-out 1s 3; }
+@keyframes due-blink { 50% { opacity: .5; } }
+.bike-pick-due { animation: tile-in .4s backwards, due-blink 1.6s ease-in-out .6s infinite; }
+
+/* Uscita salvata: spunta che si disegna */
+.saved-check { display: none; flex: none; font-size: 34px; color: var(--ok); stroke-width: 2.4; }
+#detail[data-saved="1"] .saved-check { display: block; }
+#detail[data-saved="1"] .saved-check circle { stroke-dasharray: 63; stroke-dashoffset: 63; animation: draw .6s ease-out .15s forwards; }
+#detail[data-saved="1"] .saved-check path { stroke-dasharray: 16; stroke-dashoffset: 16; animation: draw .35s ease-out .65s forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+/* Elenco vuoto: il logo galleggia */
+.empty .logo { animation: float 3.2s ease-in-out infinite; }
+@keyframes float { 50% { transform: translateY(-8px); } }
+
+/* Elenchi che entrano in cascata */
+.history li { animation: tile-in .4s cubic-bezier(.2, .8, .2, 1) backwards; }
+.history li:nth-child(2) { animation-delay: .04s; }
+.history li:nth-child(3) { animation-delay: .08s; }
+.history li:nth-child(4) { animation-delay: .12s; }
+.history li:nth-child(5) { animation-delay: .16s; }
+.history li:nth-child(n+6) { animation-delay: .2s; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+    animation-delay: 0s !important; transition-duration: .01ms !important;
+  }
+}
+
+/* ==========================================================================
+   Desktop: tutto più compatto, a sinistra l'app, a destra la dashboard con la bici 3D.
+   ========================================================================== */
+
+@media (min-width: 1100px) and (min-height: 640px) {
+  #app {
+    display: grid; height: 100dvh;
+    grid-template-columns: 88px minmax(380px, 430px) minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+  #turn, #alert { grid-column: 2; }
+  main { grid-column: 2; grid-row: 3; border-right: 1px solid var(--line); }
+  .tabs {
+    grid-column: 1; grid-row: 1 / -1; grid-template-columns: 1fr; grid-auto-rows: 80px; align-content: start;
+    padding: 12px 0; border-top: 0; border-right: 1px solid var(--line);
+  }
+  .tab { height: auto; font-size: 13px; }
+  .tab svg { font-size: 26px; }
+  .tab[aria-current="page"] { box-shadow: inset 3px 0 0 var(--accent); }
+
+  /* Più compatto */
+  h2 { font-size: 17px; margin: 14px 0 6px; }
+  .speed-value { font-size: min(150px, 22dvh); }
+  .speed-unit { font-size: 18px; }
+  .stat { padding: 6px 10px; border-radius: 12px; }
+  .stat-value { font-size: 22px; }
+  .stat-main .stat-value { font-size: 34px; }
+  .stats-small .stat-value { font-size: 18px; }
+  .stat-label { font-size: 12px; }
+  .stat-total .stat-value { font-size: 22px; }
+  .btn { min-height: 54px; font-size: 22px; border-radius: 12px; }
+  .wide { min-height: 46px; font-size: 17px; }
+  .btn-wecity { font-size: 16px; }
+  .row { min-height: 58px; padding: 8px 12px; }
+  .row-title { font-size: 18px; }
+  .row-sub { font-size: 14px; }
+  .totals .stat-value { font-size: 26px; }
+  .segmented button { min-height: 40px; font-size: 15px; }
+  .toggle { min-height: 48px; font-size: 16px; }
+  .stepper button { width: 40px; height: 40px; font-size: 22px; }
+  .stepper-value { font-size: 18px; }
+  .setting-label, .goal-text, .hint { font-size: 15px; }
+  .more-name { font-size: 26px; }
+  .logo-large { width: 64px; height: 64px; }
+  .search-btn { height: 52px; font-size: 20px; }
+  .map-strip-value { font-size: 28px; }
+  .field input, .field select { height: 42px; font-size: 16px; }
+  .maint-actions .btn { min-height: 40px; font-size: 15px; }
+  .maint-label { font-size: 16px; }
+  .icon-btn { width: 42px; height: 42px; font-size: 20px; }
+
+  /* Pannelli come finestre al centro */
+  .sheet {
+    width: min(560px, 92vw); height: auto; max-height: 88dvh; margin: auto;
+    padding: 18px; border-radius: 18px; border: 1px solid var(--line);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .5);
+  }
+  .sheet-small { margin: auto; border-radius: 18px; }
+  #detail { height: 88dvh; }
+  .toast { left: 50%; right: auto; width: min(440px, 90vw); transform: translateX(-50%); top: 24px; font-size: 16px; }
+  @keyframes toast-in { from { opacity: 0; transform: translate(-50%, -18px) scale(.96); } to { transform: translateX(-50%); } }
+
+  /* Dashboard */
+  .dash {
+    grid-column: 3; grid-row: 1 / -1; min-height: 0; overflow-y: auto;
+    display: grid; grid-template-rows: auto minmax(260px, 1fr) auto auto; gap: 14px;
+    padding: 20px 24px 24px;
+    background:
+      radial-gradient(80% 60% at 60% 30%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%);
+  }
+  .dash[hidden] { display: none; }
+  .dash-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+  .dash-kicker { font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+  .dash-title { margin: 2px 0 0; font-size: 34px; font-weight: 800; line-height: 1.05; }
+  .dash-sub { font-size: 16px; color: var(--muted); margin-top: 2px; }
+  .dash-switch { flex: none; min-height: 42px; padding: 0 16px; font-size: 16px; }
+
+  .dash-stage {
+    position: relative; min-height: 0; border-radius: 20px; overflow: hidden;
+    background:
+      radial-gradient(70% 70% at 50% 75%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%),
+      linear-gradient(180deg, color-mix(in srgb, var(--surface) 60%, transparent), var(--surface));
+    border: 1px solid var(--line);
+  }
+  .dash-3d { position: absolute; inset: 0; cursor: grab; touch-action: none; }
+  .dash-3d:active { cursor: grabbing; }
+  .dash-3d canvas { display: block; width: 100%; height: 100%; animation: fade-in 1s; }
+  .dash-3d.no-3d::after { content: "Grafica 3D non disponibile su questo computer"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); }
+  .dash-live { position: absolute; left: 20px; top: 16px; pointer-events: none; }
+  .dash-speed { font-size: 64px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+  .dash-speed small { font-size: 18px; font-weight: 700; color: var(--muted); margin-left: 6px; }
+  .dash-state { display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 15px; font-weight: 700; color: var(--muted); }
+  .dash-state::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+  .dash-state[data-state="running"]::before { background: var(--ok); animation: radar 2s ease-out infinite; }
+  .dash-state[data-state="paused"]::before { background: var(--warn); }
+  .dash-hint { position: absolute; right: 16px; bottom: 10px; margin: 0; font-size: 13px; color: var(--muted); pointer-events: none; }
+
+  .dash-kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+  .kpi { padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; animation: tile-in .5s backwards; }
+  .kpi:nth-child(n+4) { animation-delay: .08s; }
+  .kpi-value { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .kpi:nth-child(-n+3) .kpi-value { color: var(--accent); }
+  .kpi-label { font-size: 13px; font-weight: 600; color: var(--muted); }
+
+  .dash-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .dash-card { position: relative; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
+  .dash-card h3 { margin: 0 0 8px; font-size: 15px; font-weight: 800; }
+  .week-chart { position: relative; }
+  .week-chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .week-chart svg, .week-chart svg * { stroke: none; }
+  .week-chart .wk-base { stroke: var(--line); }
+  .wk-base { stroke: var(--line); stroke-width: 1; }
+  .wk-hit { fill: transparent; }
+  .wk-bar { fill: color-mix(in srgb, var(--accent) 55%, var(--surface)); transform-box: fill-box; transform-origin: bottom; animation: rise .7s cubic-bezier(.2, .8, .2, 1) backwards; }
+  .wk-bar.today { fill: var(--accent); }
+  .wk-day:hover .wk-bar { fill: var(--accent); }
+  .wk-day:nth-child(3) .wk-bar { animation-delay: .04s; } .wk-day:nth-child(4) .wk-bar { animation-delay: .08s; }
+  .wk-day:nth-child(5) .wk-bar { animation-delay: .12s; } .wk-day:nth-child(6) .wk-bar { animation-delay: .16s; }
+  .wk-day:nth-child(7) .wk-bar { animation-delay: .2s; } .wk-day:nth-child(8) .wk-bar { animation-delay: .24s; }
+  @keyframes rise { from { transform: scaleY(0); } }
+  .wk-value { fill: var(--ink); font-size: 11px; font-weight: 700; text-anchor: middle; }
+  .wk-label { fill: var(--muted); font-size: 11px; font-weight: 700; text-anchor: middle; }
+  .wk-label.today { fill: var(--ink); }
+  .wk-tip {
+    position: absolute; top: -8px; transform: translate(-50%, -100%); white-space: nowrap; pointer-events: none;
+    padding: 6px 10px; border-radius: 8px; font-size: 13px; font-weight: 700;
+    background: var(--ink); color: var(--bg); box-shadow: 0 6px 16px rgba(0, 0, 0, .3);
+  }
+  .dash-maint { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .dash-maint li { display: grid; gap: 5px; cursor: pointer; }
+  .dash-maint .maint-label { font-size: 15px; font-weight: 700; }
+  .dash-maint .maint-left { font-size: 13px; }
+  .dash-maint li[data-due="1"] .maint-left { color: var(--danger); }
+  .dash-maint .bar { height: 8px; background: var(--bg); }
+}
+
+/* Profondità: riquadri e pulsante principale con una luce dall'alto */
+.stat, .row, .maint-item, .kpi, .dash-card {
+  background-image: linear-gradient(180deg, color-mix(in srgb, #fff 5%, transparent), transparent 70%);
+}
+.btn-primary {
+  background-image: linear-gradient(180deg, color-mix(in srgb, #fff 22%, transparent), transparent);
+  box-shadow: 0 10px 26px -10px color-mix(in srgb, var(--accent) 80%, transparent);
+}
+:root[data-theme="sun"] .stat, :root[data-theme="sun"] .row, :root[data-theme="sun"] .maint-item,
+:root[data-theme="sun"] .btn-primary { background-image: none; box-shadow: none; }
