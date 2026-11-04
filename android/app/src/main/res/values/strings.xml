@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ContaKM</string>
+    <string name="title_activity_main">ContaKM</string>
+    <string name="package_name">io.github.rosariomarra.contakm</string>
+    <string name="custom_url_scheme">io.github.rosariomarra.contakm</string>
+    <string name="capacitor_background_geolocation_notification_channel_name">Registrazione uscita</string>
+    <string name="capacitor_background_geolocation_notification_icon">drawable/ic_notification</string>
+    <string name="capacitor_background_geolocation_notification_color">#FF7A1A</string>
+</resources>

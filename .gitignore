@@ -1,0 +1,6 @@
+node_modules/
+
+# Chiave di firma Android: non va mai su GitHub
+*.jks
+*.keystore
+android/keystore.properties
