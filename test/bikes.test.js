@@ -127,3 +127,9 @@ test('modelli elettrici: dedotti dal tipo e con la voce batteria', () => {
   assert.ok(bikes.visibleItems(muscolare).some((i) => i.key === 'battery'));
   assert.ok(bikes.FRAME_STYLES.filter((f) => f.group === 'Elettriche').length >= 7);
 });
+
+test('le voci sulle luci inquadrano le luci', () => {
+  assert.equal(bikes.partFor({ label: 'Controllo luci' }), 'lights');
+  assert.equal(bikes.partFor({ label: 'Pulizia faro anteriore' }), 'lights');
+  assert.equal(bikes.partFor({ label: 'Controllo batteria' }), 'battery');
+});
