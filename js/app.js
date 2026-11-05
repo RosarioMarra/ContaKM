@@ -1051,7 +1051,7 @@
     // Tutti i punti, anche quelli isolati: a schermo spento il browser sospende il GPS e il percorso arriva a pezzi.
     const all = (r.track || []).map((p) => [p[0], p[1]]);
     const gaps = all.length >= 2 && segments.reduce((n, s) => n + s.length, 0) < all.length;
-    $('btn-gpx').hidden = all.length < 2;
+    $('btn-gpx').disabled = all.length < 2;
     $('detail-gap-note').hidden = !gaps;
     $('detail').showModal();
 
@@ -1208,7 +1208,7 @@ ${segments}
     $('btn-story-share').disabled = false;
   }
 
-  async function shareStory() {
+  async function downloadStory() {
     if (!storyBlob) return;
     const name = `contakm-${new Date(detailRide?.startedAt || Date.now()).toISOString().slice(0, 10)}.png`;
     try {
@@ -1219,11 +1219,6 @@ ${segments}
           reader.readAsDataURL(storyBlob);
         });
         await native.shareImage(name, base64);
-        return;
-      }
-      const file = new File([storyBlob], name, { type: 'image/png' });
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'La mia uscita con ContaKM' });
         return;
       }
     } catch (err) {
@@ -2351,9 +2346,17 @@ ${segments}
     $('turn-close').addEventListener('click', onTurnClose);
 
     $('btn-detail-close').addEventListener('click', closeDetail);
-    $('btn-gpx').addEventListener('click', downloadGpx);
-    $('btn-story').addEventListener('click', () => openStory().catch(() => toast('Immagine non riuscita')));
-    $('btn-story-share').addEventListener('click', shareStory);
+    $('btn-download').addEventListener('click', () => $('download').showModal());
+    $('btn-download-close').addEventListener('click', () => $('download').close());
+    $('btn-gpx').addEventListener('click', () => {
+      $('download').close();
+      downloadGpx();
+    });
+    $('btn-story').addEventListener('click', () => {
+      $('download').close();
+      openStory().catch(() => toast('Immagine non riuscita'));
+    });
+    $('btn-story-share').addEventListener('click', downloadStory);
     $('btn-story-close').addEventListener('click', () => $('story').close());
     $('btn-delete').addEventListener('click', onDelete);
 
