@@ -1,7 +1,7 @@
 // Fa funzionare l'app senza rete: il conta km non deve mai dipendere dal segnale.
 // Il navigatore (ricerca e percorso) resta online; le mappe già viste restano in memoria.
 
-const SHELL_CACHE = 'contakm-shell-v34';
+const SHELL_CACHE = 'contakm-shell-v35';
 const TILE_CACHE = 'contakm-tiles-v1';
 const MAX_TILES = 1500;
 
@@ -23,6 +23,7 @@ const SHELL = [
   'js/gps.js',
   'js/nav.js',
   'js/offline.js',
+  'js/story.js',
   'js/ride.js',
   'js/sim.js',
   'js/stats.js',
