@@ -1714,7 +1714,9 @@
     // ---------- Disegno ----------
     const up = new THREE.Vector3(0, 1, 0);
     const tmp = new THREE.Vector3();
+    let disposed = false;
     function frame(now) {
+      if (disposed) return;
       requestAnimationFrame(frame);
       if (!visible || document.hidden) {
         lastDraw = now;
@@ -1832,6 +1834,27 @@
       pose(yaw) {
         autoSpin = false;
         cam.yaw = goal.yaw = yaw;
+      },
+      /** Foto della bici ferma con la telecamera già al suo posto (per l'immagine da condividere). */
+      snapshot(yaw = -0.5) {
+        autoSpin = false;
+        cam.yaw = goal.yaw = yaw;
+        cam.dist = goal.dist;
+        cam.target.copy(goal.target);
+        turntable.rotation.y = cam.yaw;
+        tmp.copy(cam.target).applyAxisAngle(up, cam.yaw);
+        const d = cam.dist * Math.max(1, 1.6 / aspect) * (options.closer || 1);
+        camera.position.set(tmp.x, tmp.y + d * 0.11, tmp.z + d);
+        camera.lookAt(tmp);
+        built.bike.position.set(0, LIFT + built.S.tire, 0);
+        renderer.render(scene, camera);
+        return renderer.domElement;
+      },
+      dispose() {
+        disposed = true;
+        renderer.dispose();
+        renderer.forceContextLoss?.();
+        renderer.domElement.remove();
       },
     };
   }

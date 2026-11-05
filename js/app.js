@@ -2,7 +2,7 @@
 
 (() => {
   const {
-    Ride, NavSession, arrowAngle, bike3d: bike3dLib, heading: headingLib, bikes: bikeLib, offline: offlineLib, caloriesFor, cloud, distance, newRecords, speedProfile, startOfWeek, weeklyTotals, fetchRoute, fetchRoutes, maneuverIcon, native, realGps, searchPlaces, simGps, store, summarize, trackSegments,
+    Ride, NavSession, arrowAngle, bike3d: bike3dLib, heading: headingLib, bikes: bikeLib, offline: offlineLib, story: storyLib, caloriesFor, cloud, distance, newRecords, speedProfile, startOfWeek, weeklyTotals, fetchRoute, fetchRoutes, maneuverIcon, native, realGps, searchPlaces, simGps, store, summarize, trackSegments,
   } = globalThis.ContaKM;
 
   const L = window.L;
@@ -1016,6 +1016,7 @@
   }
 
   let detailRide = null;
+  let detailRecords = [];
   let detailMap = null;
 
   function statTile(value, label) {
@@ -1027,6 +1028,7 @@
 
   function openDetail(r, title, records = []) {
     detailRide = r;
+    detailRecords = records;
     $('detail-title').textContent = title;
     $('detail-record').hidden = !records.length;
     $('detail-record-text').textContent = records.length ? `Nuovo record: ${records.join(', ')}` : '';
@@ -1128,6 +1130,111 @@ ${segments}
 </trk>
 </gpx>`;
     saveFile(`contakm-${new Date(r.startedAt).toISOString().slice(0, 10)}.gpx`, gpx, 'application/gpx+xml');
+  }
+
+  // ---------- Storia da condividere ----------
+
+  let storyBlob = null;
+
+  function loadImage(src) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = src;
+    });
+  }
+
+  /** Foto della bici dell'uscita, col suo modello e colore, su sfondo trasparente. */
+  async function bikePhoto(b) {
+    const holder = document.createElement('div');
+    holder.style.cssText = 'position:fixed;left:-4000px;top:0;width:1000px;height:600px;pointer-events:none';
+    document.body.append(holder);
+    let view = null;
+    try {
+      view = await bike3dLib.mount(holder, { zoomable: false, closer: 0.78 });
+      applyLook(view, b);
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const shot = view.snapshot(-0.42);
+      const copy = document.createElement('canvas');
+      copy.width = shot.width;
+      copy.height = shot.height;
+      copy.getContext('2d').drawImage(shot, 0, 0);
+      return copy;
+    } catch {
+      return null;
+    } finally {
+      view?.dispose();
+      holder.remove();
+    }
+  }
+
+  async function openStory() {
+    const r = detailRide;
+    if (!r) return;
+    storyBlob = null;
+    $('btn-story-share').disabled = true;
+    $('story-preview').innerHTML = '<div class="story-wait">Preparo l\'immagine…</div>';
+    $('story').showModal();
+    const b = bikeOf(r);
+    const avgMs = r.movingMs > 0 ? r.distanceM / (r.movingMs / 1000) : 0;
+    const date = new Date(r.startedAt);
+    const dateText = `${date.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })} · ${date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
+    const [logo, bikeImage] = await Promise.all([loadImage('icons/logo.svg'), bikePhoto(b)]);
+    const track = r.track || [];
+    const canvas = storyLib.drawStory(document.createElement('canvas'), {
+      accent: accentColor(),
+      dateText: dateText.charAt(0).toUpperCase() + dateText.slice(1),
+      km: km(r.distanceM),
+      stats: [
+        [duration(r.movingMs).replace(/^0:/, ''), 'tempo'],
+        [kmh(avgMs), 'media km/h'],
+        [kmh(r.maxSpeedMs), 'max km/h'],
+        [String(Math.round(r.climbM)), 'm salita'],
+      ],
+      bikeName: b.name,
+      bikeSub: [BIKE_TYPE_LABEL[b.type] + (bikeLib.isElectric(b) ? ' elettrica' : ''), b.brand, b.model].filter(Boolean).join(' · '),
+      all: track,
+      segments: trackSegments(track),
+      bikeImage,
+      logo,
+      record: detailRecords.length ? `Nuovo record: ${detailRecords.join(', ')}` : '',
+    });
+    storyBlob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    const img = document.createElement('img');
+    img.alt = 'Anteprima della storia';
+    img.src = URL.createObjectURL(storyBlob);
+    $('story-preview').replaceChildren(img);
+    $('btn-story-share').disabled = false;
+  }
+
+  async function shareStory() {
+    if (!storyBlob) return;
+    const name = `contakm-${new Date(detailRide?.startedAt || Date.now()).toISOString().slice(0, 10)}.png`;
+    try {
+      if (native.isNative) {
+        const base64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result).split(',')[1]);
+          reader.readAsDataURL(storyBlob);
+        });
+        await native.shareImage(name, base64);
+        return;
+      }
+      const file = new File([storyBlob], name, { type: 'image/png' });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'La mia uscita con ContaKM' });
+        return;
+      }
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+    }
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(storyBlob);
+    link.download = name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    toast('Immagine salvata');
   }
 
   // ---------- Profilo: account, statistiche e preferenze ----------
@@ -2245,6 +2352,9 @@ ${segments}
 
     $('btn-detail-close').addEventListener('click', closeDetail);
     $('btn-gpx').addEventListener('click', downloadGpx);
+    $('btn-story').addEventListener('click', () => openStory().catch(() => toast('Immagine non riuscita')));
+    $('btn-story-share').addEventListener('click', shareStory);
+    $('btn-story-close').addEventListener('click', () => $('story').close());
     $('btn-delete').addEventListener('click', onDelete);
 
     document.addEventListener('visibilitychange', () => {
