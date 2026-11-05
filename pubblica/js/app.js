@@ -1045,20 +1045,31 @@
     $('detail-bike-row').hidden = bikeList.length < 2;
     $('detail-bike').replaceChildren(...bikeList.map((b) => new Option(b.name, b.id)));
     $('detail-bike').value = bikeOf(r).id;
-    const segments = trackSegments(r.track).map((s) => s.map((p) => [p[0], p[1]]));
-    $('btn-gpx').hidden = segments.length === 0;
+    const segments = trackSegments(r.track || []).map((s) => s.map((p) => [p[0], p[1]]));
+    // Tutti i punti, anche quelli isolati: a schermo spento il browser sospende il GPS e il percorso arriva a pezzi.
+    const all = (r.track || []).map((p) => [p[0], p[1]]);
+    const gaps = all.length >= 2 && segments.reduce((n, s) => n + s.length, 0) < all.length;
+    $('btn-gpx').hidden = all.length < 2;
+    $('detail-gap-note').hidden = !gaps;
     $('detail').showModal();
 
     const mapEl = $('detail-map');
-    mapEl.hidden = segments.length === 0;
-    if (segments.length > 0) {
+    mapEl.hidden = all.length < 2;
+    if (all.length >= 2) {
       detailMap = L.map(mapEl, { zoomControl: false, maxZoom: 19 });
       detailMap.attributionControl.setPrefix(false);
-      const line = L.polyline(segments, { color: ROUTE_COLOR, weight: 6 });
-      detailMap.fitBounds(line.getBounds(), { padding: [20, 20], animate: false });
+      const bounds = L.latLngBounds(all);
+      detailMap.fitBounds(bounds, { padding: [20, 20], animate: false });
       createTiles(detailMap);
-      line.addTo(detailMap);
-      animateTrack(line);
+      // Tratteggiato dove il GPS mancava, pieno dove è stato registrato
+      if (gaps) L.polyline(all, { color: ROUTE_COLOR, weight: 4, opacity: 0.55, dashArray: '2 10', lineCap: 'round', interactive: false }).addTo(detailMap);
+      if (segments.length) {
+        const line = L.polyline(segments, { color: ROUTE_COLOR, weight: 6 }).addTo(detailMap);
+        animateTrack(line);
+      }
+      for (const [i, p] of [[0, all[0]], [1, all[all.length - 1]]]) {
+        L.circleMarker(p, { radius: 7, weight: 3, color: '#fff', fillColor: i ? '#e5484d' : '#22c55e', fillOpacity: 1, interactive: false }).addTo(detailMap);
+      }
     }
   }
 
@@ -1106,7 +1117,8 @@
   function downloadGpx() {
     const r = detailRide;
     const point = (p) => `<trkpt lat="${p[0]}" lon="${p[1]}"><time>${new Date(r.startedAt + p[2] * 1000).toISOString()}</time></trkpt>`;
-    const segments = trackSegments(r.track)
+    const found = trackSegments(r.track || []);
+    const segments = (found.length ? found : [r.track || []])
       .map((s) => `<trkseg>\n${s.map(point).join('\n')}\n</trkseg>`)
       .join('\n');
     const gpx = `<?xml version="1.0" encoding="UTF-8"?>
@@ -1460,9 +1472,11 @@ ${segments}
 
   /** Profilo della velocità di un'uscita: linea nel tempo, con la media tratteggiata. */
   function renderSpeedProfile(r) {
-    const points = speedProfile(r.track || [], trackSegments, distance);
-    $('detail-speed').hidden = points.length < 6;
-    if (points.length < 6) return;
+    let points = speedProfile(r.track || [], trackSegments, distance);
+    // Percorso a pezzi (GPS sospeso a schermo spento): velocità media tra un punto e l'altro, su tutta l'uscita
+    if (points.length < 6) points = speedProfile(r.track || [], (t) => [t], distance).filter((p) => p.kmh < 80);
+    $('detail-speed').hidden = points.length < 3;
+    if (points.length < 3) return;
     const W = 320;
     const H = 90;
     const maxKmh = Math.max(...points.map((p) => p.kmh));
