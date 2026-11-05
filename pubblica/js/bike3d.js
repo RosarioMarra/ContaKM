@@ -255,6 +255,8 @@
       tail: glow(0xff3b3b, 0.9),
       screen: glow(0x38bdf8, 0.7),
       led: glow(0x34d399, 1),
+      // Parafanghi in plastica nera opaca
+      fender: new THREE.MeshStandardMaterial({ color: 0x15181c, metalness: 0, roughness: 0.88, side: THREE.DoubleSide }),
       pedal: std(0x2c3138, 0.75, 0.35),
       rd: std(0x3b4048, 0.75, 0.28),
       rdSilver: std(0xd9dee4, 1, 0.18),
@@ -1094,7 +1096,7 @@
       if (!S.longtail) list.push({ c: rear, R: rearR, from: 18 * deg, to: 195 * deg, stays: [120 * deg, 188 * deg], reflector: true, flap: S.comfort, bridge: 62 * deg });
       for (const f of list) {
         const fr = f.R + S.tire + 0.024;
-        const shell = new THREE.Mesh(fenderGeometry(fr, f.from, f.to, width), mat.frame);
+        const shell = new THREE.Mesh(fenderGeometry(fr, f.from, f.to, width), mat.fender);
         shell.position.copy(f.c);
         bike.add(shell);
         // Astine dal bordo del parafango al mozzo
@@ -1124,7 +1126,7 @@
         // Attacco del parafango posteriore al ponticello dei foderi bassi, dietro il movimento centrale
         const a = 18 * deg;
         const fr = rearR + S.tire + 0.024;
-        bike.add(box(0.03, 0.012, Z * 1.9, mat.frame, [rear.x + Math.cos(a) * fr - 0.01, rear.y + Math.sin(a) * fr - 0.012, 0]));
+        bike.add(box(0.03, 0.012, Z * 1.9, mat.fender, [rear.x + Math.cos(a) * fr - 0.01, rear.y + Math.sin(a) * fr - 0.012, 0]));
       }
     }
     if (S.rack) {

@@ -885,3 +885,4 @@ body {
 .offline-progress .bar-fill { transition: width .2s; }
 .offline-progress-text { font-size: 14px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
 #offline-save .preview-actions { margin-top: 16px; }
+.detail-gap-note { margin: 6px 2px 0; font-size: 13px; }
