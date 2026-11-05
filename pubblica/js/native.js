@@ -67,6 +67,12 @@
       return (on ? KeepAwake.keepAwake() : KeepAwake.allowSleep()).catch(() => {});
     },
 
+    /** Immagine (base64 senza intestazione) salvata nella cache e passata al menu Condividi (Instagram, WhatsApp…). */
+    async shareImage(name, base64) {
+      const { uri } = await Filesystem.writeFile({ path: name, data: base64, directory: 'CACHE' });
+      await Share.share({ title: 'La mia uscita con ContaKM', files: [uri] });
+    },
+
     /** Salva il file nella cache dell'app e apre il menu Condividi (Drive, email, File…). */
     async saveFile(name, content) {
       const { uri } = await Filesystem.writeFile({ path: name, data: content, directory: 'CACHE', encoding: 'utf8' });

@@ -4,7 +4,7 @@ Tutto quello che serve è in questa cartella. Le schermate della Play Console ca
 
 | File | Dove va nella Play Console |
 | --- | --- |
-| `ContaKM-1.23.aab` (te l'ho mandato a parte) | Test → Test chiuso → Crea release |
+| `ContaKM-1.24.aab` (te l'ho mandato a parte) | Test → Test chiuso → Crea release |
 | `icona-512.png` | Scheda dello store → Icona dell'app |
 | `grafica-in-evidenza-1024x500.jpg` | Scheda dello store → Grafica in evidenza |
 | `screenshot-telefono/it/01…08.jpg` | Scheda dello store (italiano) → Screenshot telefono |
@@ -156,9 +156,9 @@ IL TUO PROFILO
 Mappe © OpenStreetMap. Percorsi e ricerca con servizi gratuiti basati su OpenStreetMap.
 ```
 
-**Note di versione (1.23):**
+**Note di versione (1.24):**
 ```
-Prima versione di ContaKM: conta km, navigatore per la bici con tre percorsi a scelta e mappe offline, più bici in 3D (anche elettriche), manutenzione, grafici delle uscite e profilo con copia online facoltativa.
+Prima versione di ContaKM: conta km, navigatore per la bici con tre percorsi a scelta e mappe offline, più bici in 3D (anche elettriche), manutenzione, grafici delle uscite, storie da condividere e profilo con copia online facoltativa.
 ```
 
 ### Inglese (en-US) — facoltativa ma consigliata
@@ -227,8 +227,8 @@ Per gli account personali nuovi Google chiede un **test chiuso con almeno 12 tes
 2. **Tester**: crea un elenco email con **almeno 12 persone** (amici, familiari: servono account Google, va bene anche Gmail) e salvalo.
 3. **Crea nuova release**:
    - Alla prima release accetta **Firma dell'app di Google Play** (Google conserva la chiave definitiva; la tua `contakm-upload.jks` resta la chiave di caricamento).
-   - Carica `ContaKM-1.23.aab`.
-   - Nome release: `1.23`. Note: quelle qui sopra.
+   - Carica `ContaKM-1.24.aab`.
+   - Nome release: `1.24`. Note: quelle qui sopra.
 4. **Paesi**: scegli almeno l'Italia.
 5. **Invia per la revisione**. La prima revisione può richiedere da qualche ora a qualche giorno.
 6. Quando è approvata, copia il **link per partecipare al test** e mandalo ai tester con questo messaggio:
