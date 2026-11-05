@@ -335,10 +335,9 @@
       <select id="detail-bike"></select>
     </label>
     <div class="detail-actions">
-      <button class="btn btn-primary" id="btn-story"><svg><use href="#i-share"/></svg>Condividi storia</button>
+      <button class="btn btn-primary" id="btn-download"><svg><use href="#i-download"/></svg>Scarica</button>
       <button class="btn btn-stop" id="btn-delete">Elimina</button>
     </div>
-    <button class="link-btn" id="btn-gpx">Esporta il percorso in GPX (per Strava, Komoot…)</button>
   </dialog>
 
   <dialog id="bike-picker" class="sheet">
@@ -438,13 +437,24 @@
     </div>
   </dialog>
 
+  <dialog id="download" class="sheet sheet-small">
+    <div class="sheet-head">
+      <h2>Scarica l'uscita</h2>
+      <button class="icon-btn" id="btn-download-close" aria-label="Chiudi"><svg><use href="#i-close"/></svg></button>
+    </div>
+    <ul class="download-list">
+      <li><button class="row" id="btn-story"><span class="row-title">Immagine PNG</span><span class="row-sub">La grafica con percorso, la tua bici e i numeri dell'uscita</span></button></li>
+      <li><button class="row" id="btn-gpx"><span class="row-title">Percorso GPX</span><span class="row-sub">Il tracciato GPS, da caricare su Strava, Komoot o Garmin</span></button></li>
+    </ul>
+  </dialog>
+
   <dialog id="story" class="sheet story-sheet">
     <div class="sheet-head">
-      <h2>La tua storia</h2>
+      <h2>Immagine dell'uscita</h2>
       <button class="icon-btn" id="btn-story-close" aria-label="Chiudi"><svg><use href="#i-close"/></svg></button>
     </div>
     <div class="story-preview" id="story-preview"><div class="story-wait">Preparo l'immagine…</div></div>
-    <button class="btn btn-primary wide" id="btn-story-share" disabled><svg><use href="#i-share"/></svg>Condividi</button>
+    <button class="btn btn-primary wide" id="btn-story-share" disabled><svg><use href="#i-download"/></svg>Scarica PNG</button>
   </dialog>
 
   <dialog id="welcome" class="sheet sheet-small">
