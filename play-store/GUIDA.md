@@ -129,14 +129,19 @@ CONTA KM IN TEMPO REALE
 
 NAVIGATORE PER LA BICI
 • Cerca un indirizzo o un luogo, anche a voce
-• Percorso più breve calcolato per la bici, con le indicazioni svolta per svolta e la voce in italiano
-• La freccia segue la bussola del telefono, anche da fermo
+• Tre percorsi a scelta con tempo, km e orario di arrivo, come nei navigatori più famosi
+• Indicazioni svolta per svolta con la voce in italiano
+• La mappa ruota con la direzione di marcia e la freccia segue la bussola del telefono
 • Se sbagli strada ricalcola da solo
-• All'arrivo l'uscita si salva da sola, con il percorso sulla mappa
+
+MAPPE OFFLINE
+• Salva la zona dove pedali e la mappa si vede anche senza internet
+• Strade, nomi delle vie e piste ciclabili fino al massimo dettaglio
 
 LE TUE BICI, IN 3D
 • Aggiungi tutte le tue bici: città, MTB, corsa ed elettriche (e-city, e-trekking, e-MTB, e-gravel, cargo, pieghevole, fat)
-• Scegli modello e colore e guardala in 3D: si gira con un dito e il campanello suona davvero
+• Scegli modello e colore e guardala in 3D, curata nei dettagli: cambio, pignoni, freni a disco, luci, pedali
+• Si gira con un dito, si ingrandisce e il campanello suona davvero
 • Ogni uscita resta legata alla bici con cui l'hai fatta
 
 MANUTENZIONE SOTTO CONTROLLO
@@ -145,8 +150,11 @@ MANUTENZIONE SOTTO CONTROLLO
 • Avviso a fine uscita quando è ora di intervenire
 
 STATISTICHE E USCITE
-• Km della settimana e del mese, obiettivo settimanale e record personali
-• Ogni uscita con il percorso sulla mappa e il file GPX da esportare
+• Km della settimana e del mese, grafico delle ultime 8 settimane e obiettivo settimanale
+• Record personali, con l'avviso quando ne batti uno
+• Ogni uscita con il percorso sulla mappa e il grafico della velocità
+• Scarica l'immagine dell'uscita, con percorso, la tua bici e i numeri, pronta da condividere
+• Esporta il percorso in GPX per Strava, Komoot o Garmin
 • Backup delle uscite in un file
 
 IL TUO PROFILO
