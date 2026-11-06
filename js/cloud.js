@@ -6,6 +6,8 @@
   // Chiave pubblica: può stare nell'app, i dati sono protetti dalle regole RLS (supabase/schema.sql).
   const SUPABASE_KEY = 'sb_publishable_4FNJngjXcTGQS1b5TKs84Q_8O8Z89CS';
   const NATIVE_REDIRECT = 'io.github.rosariomarra.contakm://auth';
+  // Google torna su questa pagina del sito (indirizzo già consentito in Supabase), che riapre l'app col codice.
+  const NATIVE_LANDING = 'https://rosariomarra.github.io/ContaKM/app-login.html';
   const SYNC_DELAY_MS = 4000; // si aspetta un attimo per caricare più modifiche insieme
 
   const { store, sync, native } = globalThis.ContaKM;
@@ -93,7 +95,7 @@
     if (native.isNative) {
       const { data, error } = await client.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: NATIVE_REDIRECT, skipBrowserRedirect: true },
+        options: { redirectTo: NATIVE_LANDING, skipBrowserRedirect: true },
       });
       if (error) throw error;
       await native.openBrowser(data.url);
@@ -164,6 +166,18 @@
     if (!globalThis.supabase?.createClient) {
       render();
       return;
+    }
+    // Il codice di un accesso partito dall'app Android, finito per errore sul sito (manca la chiave che ha l'app):
+    // lo si gira all'app invece di provare a usarlo qui.
+    if (!native.isNative && /[?&]code=/.test(location.search) && /Android/i.test(navigator.userAgent)) {
+      let verifier = null;
+      try {
+        verifier = localStorage.getItem('contakm.auth-code-verifier');
+      } catch { /* niente */ }
+      if (!verifier) {
+        location.replace(`app-login.html${location.search}`);
+        return;
+      }
     }
     client = globalThis.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
       auth: {
