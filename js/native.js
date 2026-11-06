@@ -15,6 +15,7 @@
   const LocalNotifications = plugin('LocalNotifications');
   const Browser = plugin('Browser');
   const App = plugin('App');
+  const Preferences = plugin('Preferences');
 
   // Un solo watcher alla volta: in uscita con la notifica (GPS anche a schermo spento), altrimenti senza.
   let gpsCallbacks = null;
@@ -105,6 +106,36 @@
       App.addListener('appUrlOpen', (e) => fn(e.url)).catch(() => {});
       App.getLaunchUrl().then((r) => r?.url && fn(r.url)).catch(() => {});
     },
+
+    /**
+     * Memoria dell'accesso per Supabase nell'app: le Preferences di Android si salvano subito sul telefono,
+     * mentre la memoria della pagina web viene scritta con qualche secondo di ritardo e chiudendo l'app
+     * appena dopo l'accesso il login andava perso. Il vecchio accesso salvato nella pagina viene spostato qui.
+     */
+    authStorage: isNative ? {
+      async getItem(key) {
+        const { value } = await Preferences.get({ key });
+        if (value != null) return value;
+        let old = null;
+        try {
+          old = localStorage.getItem(key);
+        } catch { /* niente da recuperare */ }
+        if (old != null) await Preferences.set({ key, value: old });
+        return old;
+      },
+      async setItem(key, value) {
+        await Preferences.set({ key, value });
+        try {
+          localStorage.setItem(key, value);
+        } catch { /* copia di riserva, non indispensabile */ }
+      },
+      async removeItem(key) {
+        await Preferences.remove({ key });
+        try {
+          localStorage.removeItem(key);
+        } catch { /* già tolto */ }
+      },
+    } : null,
 
     openSettings() {
       return BackgroundGeolocation.openSettings().catch(() => {});

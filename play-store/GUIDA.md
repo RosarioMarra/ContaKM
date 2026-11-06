@@ -4,7 +4,7 @@ Tutto quello che serve è in questa cartella. Le schermate della Play Console ca
 
 | File | Dove va nella Play Console |
 | --- | --- |
-| `ContaKM-1.25.aab` (te l'ho mandato a parte) | Test → Test chiuso → Crea release |
+| `ContaKM-1.26.aab` (te l'ho mandato a parte) | Test → Test chiuso → Crea release |
 | `icona-512.png` | Scheda dello store → Icona dell'app |
 | `grafica-in-evidenza-1024x500.jpg` | Scheda dello store → Grafica in evidenza |
 | `screenshot-telefono/it/01…08.jpg` | Scheda dello store (italiano) → Screenshot telefono |
@@ -129,14 +129,19 @@ CONTA KM IN TEMPO REALE
 
 NAVIGATORE PER LA BICI
 • Cerca un indirizzo o un luogo, anche a voce
-• Percorso più breve calcolato per la bici, con le indicazioni svolta per svolta e la voce in italiano
-• La freccia segue la bussola del telefono, anche da fermo
+• Tre percorsi a scelta con tempo, km e orario di arrivo, come nei navigatori più famosi
+• Indicazioni svolta per svolta con la voce in italiano
+• La mappa ruota con la direzione di marcia e la freccia segue la bussola del telefono
 • Se sbagli strada ricalcola da solo
-• All'arrivo l'uscita si salva da sola, con il percorso sulla mappa
+
+MAPPE OFFLINE
+• Salva la zona dove pedali e la mappa si vede anche senza internet
+• Strade, nomi delle vie e piste ciclabili fino al massimo dettaglio
 
 LE TUE BICI, IN 3D
 • Aggiungi tutte le tue bici: città, MTB, corsa ed elettriche (e-city, e-trekking, e-MTB, e-gravel, cargo, pieghevole, fat)
-• Scegli modello e colore e guardala in 3D: si gira con un dito e il campanello suona davvero
+• Scegli modello e colore e guardala in 3D, curata nei dettagli: cambio, pignoni, freni a disco, luci, pedali
+• Si gira con un dito, si ingrandisce e il campanello suona davvero
 • Ogni uscita resta legata alla bici con cui l'hai fatta
 
 MANUTENZIONE SOTTO CONTROLLO
@@ -145,8 +150,11 @@ MANUTENZIONE SOTTO CONTROLLO
 • Avviso a fine uscita quando è ora di intervenire
 
 STATISTICHE E USCITE
-• Km della settimana e del mese, obiettivo settimanale e record personali
-• Ogni uscita con il percorso sulla mappa e il file GPX da esportare
+• Km della settimana e del mese, grafico delle ultime 8 settimane e obiettivo settimanale
+• Record personali, con l'avviso quando ne batti uno
+• Ogni uscita con il percorso sulla mappa e il grafico della velocità
+• Scarica l'immagine dell'uscita, con percorso, la tua bici e i numeri, pronta da condividere
+• Esporta il percorso in GPX per Strava, Komoot o Garmin
 • Backup delle uscite in un file
 
 IL TUO PROFILO
@@ -156,7 +164,7 @@ IL TUO PROFILO
 Mappe © OpenStreetMap. Percorsi e ricerca con servizi gratuiti basati su OpenStreetMap.
 ```
 
-**Note di versione (1.25):**
+**Note di versione (1.26):**
 ```
 Prima versione di ContaKM: conta km, navigatore per la bici con tre percorsi a scelta e mappe offline, più bici in 3D (anche elettriche), manutenzione, grafici delle uscite, immagini delle uscite da scaricare e profilo con copia online facoltativa.
 ```
@@ -227,8 +235,8 @@ Per gli account personali nuovi Google chiede un **test chiuso con almeno 12 tes
 2. **Tester**: crea un elenco email con **almeno 12 persone** (amici, familiari: servono account Google, va bene anche Gmail) e salvalo.
 3. **Crea nuova release**:
    - Alla prima release accetta **Firma dell'app di Google Play** (Google conserva la chiave definitiva; la tua `contakm-upload.jks` resta la chiave di caricamento).
-   - Carica `ContaKM-1.25.aab`.
-   - Nome release: `1.25`. Note: quelle qui sopra.
+   - Carica `ContaKM-1.26.aab`.
+   - Nome release: `1.26`. Note: quelle qui sopra.
 4. **Paesi**: scegli almeno l'Italia.
 5. **Invia per la revisione**. La prima revisione può richiedere da qualche ora a qualche giorno.
 6. Quando è approvata, copia il **link per partecipare al test** e mandalo ai tester con questo messaggio:
