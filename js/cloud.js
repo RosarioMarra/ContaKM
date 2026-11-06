@@ -18,6 +18,7 @@
   let running = null;
   let lastSyncAt = 0;
   let lastError = null;
+  let handledCode = null;
 
   const timeOf = (ms) => new Date(ms).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
 
@@ -120,7 +121,11 @@
       return;
     }
     const code = params.get('code');
-    if (!code) return;
+    if (!code || code === handledCode) return;
+    handledCode = code;
+    // All'avvio Android ripete il link che ha aperto l'app: se si è già dentro non serve rifare l'accesso.
+    const { data: current } = await client.auth.getSession();
+    if (current?.session) return;
     const { error } = await client.auth.exchangeCodeForSession(code);
     if (error) options.toast?.('Accesso non riuscito: riprova');
   }
@@ -167,6 +172,7 @@
         persistSession: true,
         autoRefreshToken: true,
         storageKey: 'contakm.auth',
+        ...(native.authStorage ? { storage: native.authStorage } : {}),
       },
     });
     if (native.isNative) native.onAppUrl((url) => handleAppUrl(url).catch(() => {}));
