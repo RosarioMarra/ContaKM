@@ -61,7 +61,7 @@ Alla prima apertura le uscite già salvate e la manutenzione di prima passano a 
 In Profilo si accede con Google (gestito da Supabase). Con l'accesso attivo uscite, bici, manutenzione, impostazioni e preferiti vengono copiati online e ritrovati su un altro telefono; senza accesso tutto resta solo sul telefono. Il telefono resta la copia principale e la sincronizzazione parte da sola dopo ogni modifica, quando l'app torna in primo piano e ogni 5 minuti (`js/sync.js`, `js/cloud.js`). Vince la modifica più recente; un'eliminazione passa a tutti i telefoni.
 
 - Tabelle, regole di accesso e cancellazione dell'account: `supabase/schema.sql` (da eseguire una volta nel SQL Editor di Supabase).
-- In Supabase → Authentication → URL Configuration servono come Redirect URLs `https://rosariomarra.github.io/ContaKM/**`, `http://localhost:5173/**` e `io.github.rosariomarra.contakm://auth` (ritorno nell'app Android).
+- In Supabase → Authentication → URL Configuration servono come Redirect URLs `https://rosariomarra.github.io/ContaKM/**`, `http://localhost:5173/**` (l'app Android torna da Google su `app-login.html`, che la riapre con il link `io.github.rosariomarra.contakm://auth`).
 - Pagina per la cancellazione dell'account richiesta dal Play Store: https://rosariomarra.github.io/ContaKM/elimina-account.html
 
 ## App Android (Play Store)
