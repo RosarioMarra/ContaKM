@@ -1,6 +1,8 @@
 # ContaKM
 
-Conta km e navigatore per la bici. È una web app installabile (PWA): niente account, niente chiavi API, i dati restano sul telefono.
+Conta km e navigatore per la bici, di Rosario Marra. È una web app installabile (PWA) e un'app Android: niente account obbligatorio, i dati restano sul telefono.
+
+Sito: https://rosariomarra.github.io/ContaKM/
 
 ## Provarla sul PC
 
