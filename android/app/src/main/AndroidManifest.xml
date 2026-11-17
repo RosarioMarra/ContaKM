@@ -33,6 +33,28 @@
 
         </activity>
 
+        <!-- Widget della schermata Home -->
+        <receiver android:name=".StatsWidget" android:label="ContaKM – Riepilogo" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_stats_info" />
+        </receiver>
+
+        <receiver android:name=".StartWidget" android:label="ContaKM – Avvia" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_start_info" />
+        </receiver>
+
+        <receiver android:name=".MaintenanceWidget" android:label="ContaKM – Manutenzione" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_maintenance_info" />
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

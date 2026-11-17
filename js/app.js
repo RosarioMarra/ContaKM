@@ -40,6 +40,8 @@
   let ride = new Ride(store.loadCurrent());
   const prefs = store.loadPrefs();
   let bikeList = store.loadBikes();
+  let widgetSentAt = 0; // widget della schermata Home: ultimo invio dei dati
+  let widgetState = '';
 
   // Il colore predefinito è diventato l'azzurro: chi aveva ancora l'arancio di prima passa all'azzurro, una volta sola.
   if (!prefs.accentV2) {
@@ -299,6 +301,7 @@
     if (kmStep > lastKmStep && ride.state === 'running') celebrateKm(kmStep);
     lastKmStep = kmStep;
     renderDashLive();
+    updateWidgets();
   }
 
   // ---------- Tachimetro analogico ----------
@@ -990,6 +993,7 @@
     $('goal-text').textContent = `Obiettivo settimana: ${number(all.weekM / 1000, 1)} di ${goal} km`;
     $('goal-fill').style.width = `${goal ? Math.min(100, (all.weekM / 1000 / goal) * 100) : 0}%`;
 
+    updateWidgets(true);
     $('records').hidden = s.rides === 0;
     $('record-long').textContent = km(s.longestM);
     $('record-avg').textContent = kmh(s.bestAvgMs);
@@ -1389,6 +1393,7 @@ ${segments}
 
   /** Tutto quello che mostra le bici: home, elenco in Altro e, se aperta, la scheda della bici. */
   function renderBikes() {
+    updateWidgets(true);
     renderBikePick();
     renderBikeList();
     if ($('bike').open) renderBikeSheet();
@@ -2154,6 +2159,70 @@ ${segments}
     view.scrollTo({ top: Math.max(0, top - view.clientHeight / 3), behavior: 'smooth' });
   }
 
+  // ---------- Widget della schermata Home (app Android) ----------
+
+  /** Manda ai widget i numeri già formattati. Durante l'uscita al massimo ogni 15 secondi. */
+  function updateWidgets(force = false) {
+    if (!native.isNative || !bikeList?.length) return;
+    const now = Date.now();
+    if (!force && ride.state === widgetState && now - widgetSentAt < 15000) return;
+    widgetSentAt = now;
+    widgetState = ride.state;
+    const history = store.loadHistory();
+    const s = summarize(history, now);
+    const goal = prefs.weeklyGoalKm || 0;
+    const b = activeBike();
+    const bikeKmNow = bikeLib.bikeKm(b, history, bikeList);
+    const maint = bikeLib.visibleItems(b)
+      .map((item) => ({ item, st: bikeLib.itemStatus(item, bikeKmNow, now) }))
+      .sort((x, y) => y.st.ratio - x.st.ratio)
+      .slice(0, 3)
+      .map(({ item, st }) => ({ label: item.label, text: maintLeftText(st), pct: Math.round(Math.min(1, st.ratio) * 100), due: st.due }));
+    const last = history[0];
+    native.updateWidgets({
+      bike: b.name,
+      weekKm: number(s.weekM / 1000, 1),
+      monthKm: number(s.monthM / 1000, 1),
+      totalKm: number(s.totalM / 1000, 0),
+      rides: String(s.rides),
+      goalKm: goal,
+      goalPct: goal ? Math.round(Math.min(1, s.weekM / 1000 / goal) * 100) : 0,
+      lastRide: last ? `${km(last.distanceM)} km, ${new Date(last.startedAt).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })}` : '',
+      maint,
+      state: ride.state,
+      rideKm: km(ride.distanceM),
+      rideTime: duration(ride.movingMs),
+      rideSpeed: String(Math.round(ride.speedMs * 3.6)),
+    });
+  }
+
+  /** Tocchi sui widget: "start" fa partire l'uscita, "bike" apre la manutenzione della bici in uso. */
+  function handleWidgetUrl(url) {
+    const m = /^io\.github\.rosariomarra\.contakm:\/\/(start|bike)\b/.exec(url);
+    if (!m) return;
+    // All'avvio Android ripresenta il link che ha aperto l'app: ogni tocco si esegue una volta sola.
+    const t = Number(new URL(url.replace(/^[^:]+:\/\//, 'https://x/')).searchParams.get('t')) || 0;
+    let lastTap = 0;
+    try {
+      lastTap = Number(localStorage.getItem('contakm.widgetTap')) || 0;
+    } catch { /* niente */ }
+    if (t && t <= lastTap) return;
+    try {
+      localStorage.setItem('contakm.widgetTap', String(t || Date.now()));
+    } catch { /* niente */ }
+    if (m[1] === 'start') {
+      showView('ride');
+      if (ride.state !== 'running') {
+        askCompass();
+        startRide();
+        toast('Uscita avviata dal widget');
+      }
+    } else {
+      showView('more');
+      openBike(activeBike().id);
+    }
+  }
+
   // ---------- Mappe offline ----------
 
   let offlineJob = null;
@@ -2394,6 +2463,7 @@ ${segments}
     paintRider();
   });
   bindEvents();
+  if (native.isNative) native.onAppUrl(handleWidgetUrl);
   // Dati arrivati da un altro telefono: si ridisegna tutto quello che li mostra.
   cloud.init({
     toast,

@@ -16,6 +16,7 @@
   const Browser = plugin('Browser');
   const App = plugin('App');
   const Preferences = plugin('Preferences');
+  const ContaWidgets = plugin('ContaWidgets');
 
   // Un solo watcher alla volta: in uscita con la notifica (GPS anche a schermo spento), altrimenti senza.
   let gpsCallbacks = null;
@@ -136,6 +137,11 @@
         } catch { /* già tolto */ }
       },
     } : null,
+
+    /** Dati per i widget della schermata Home (testi già pronti in italiano). */
+    updateWidgets(data) {
+      return ContaWidgets.update({ data: JSON.stringify(data) }).catch(() => {});
+    },
 
     openSettings() {
       return BackgroundGeolocation.openSettings().catch(() => {});

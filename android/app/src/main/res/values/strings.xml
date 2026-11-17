@@ -7,4 +7,7 @@
     <string name="capacitor_background_geolocation_notification_channel_name">Registrazione uscita</string>
     <string name="capacitor_background_geolocation_notification_icon">drawable/ic_notification</string>
     <string name="capacitor_background_geolocation_notification_color">#FF7A1A</string>
+    <string name="widget_stats_desc">Km della settimana con l\'obiettivo, del mese e totali; durante l\'uscita i numeri in diretta</string>
+    <string name="widget_start_desc">Un tocco e parte l\'uscita</string>
+    <string name="widget_maint_desc">Le prossime manutenzioni della bici in uso</string>
 </resources>

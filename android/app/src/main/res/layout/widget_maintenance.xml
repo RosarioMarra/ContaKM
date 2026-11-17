@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/w_root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="@drawable/widget_bg" android:padding="14dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Manutenzione"
+            android:textColor="#38bdf8" android:textStyle="bold" android:textSize="14sp" />
+        <TextView android:id="@+id/w_bike" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:gravity="end" android:textColor="#9fb0c4" android:textSize="11sp" android:maxLines="1" android:ellipsize="end" />
+    </LinearLayout>
+    <TextView android:id="@+id/w_m_empty" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp"
+        android:text="Apri ContaKM per vedere le manutenzioni della tua bici" android:textColor="#9fb0c4" android:textSize="13sp" />
+    <LinearLayout android:id="@+id/w_m1" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="8dp" android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <TextView android:id="@+id/w_m1_label" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                android:textColor="#ffffff" android:textStyle="bold" android:textSize="13sp" android:maxLines="1" android:ellipsize="end" />
+            <TextView android:id="@+id/w_m1_left" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginStart="6dp" android:textColor="#9fb0c4" android:textSize="12sp" android:maxLines="1" />
+        </LinearLayout>
+        <ProgressBar android:id="@+id/w_m1_bar" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent"
+            android:layout_height="5dp" android:layout_marginTop="3dp" android:max="100" android:progressDrawable="@drawable/widget_progress" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/w_m2" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="8dp" android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <TextView android:id="@+id/w_m2_label" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                android:textColor="#ffffff" android:textStyle="bold" android:textSize="13sp" android:maxLines="1" android:ellipsize="end" />
+            <TextView android:id="@+id/w_m2_left" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginStart="6dp" android:textColor="#9fb0c4" android:textSize="12sp" android:maxLines="1" />
+        </LinearLayout>
+        <ProgressBar android:id="@+id/w_m2_bar" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent"
+            android:layout_height="5dp" android:layout_marginTop="3dp" android:max="100" android:progressDrawable="@drawable/widget_progress" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/w_m3" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="8dp" android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <TextView android:id="@+id/w_m3_label" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                android:textColor="#ffffff" android:textStyle="bold" android:textSize="13sp" android:maxLines="1" android:ellipsize="end" />
+            <TextView android:id="@+id/w_m3_left" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginStart="6dp" android:textColor="#9fb0c4" android:textSize="12sp" android:maxLines="1" />
+        </LinearLayout>
+        <ProgressBar android:id="@+id/w_m3_bar" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent"
+            android:layout_height="5dp" android:layout_marginTop="3dp" android:max="100" android:progressDrawable="@drawable/widget_progress" />
+    </LinearLayout>
+</LinearLayout>
