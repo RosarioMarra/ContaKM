@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/w_root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="horizontal" android:gravity="center" android:background="@drawable/widget_button"
+    android:paddingStart="14dp" android:paddingEnd="14dp">
+    <ImageView android:layout_width="30dp" android:layout_height="30dp" android:src="@drawable/widget_play"
+        android:contentDescription="Avvia" />
+    <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:orientation="vertical">
+        <TextView android:id="@+id/w_start_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Avvia"
+            android:textColor="#062033" android:textStyle="bold" android:textSize="22sp" android:maxLines="1" android:includeFontPadding="false" />
+        <TextView android:id="@+id/w_start_sub" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ContaKM"
+            android:textColor="#0b3550" android:textSize="12sp" android:maxLines="1" />
+    </LinearLayout>
+</LinearLayout>
